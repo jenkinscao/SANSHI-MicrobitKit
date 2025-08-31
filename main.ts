@@ -1,13 +1,49 @@
-//% weight=100 color=#0fbc11 icon="\uf0eb"
-namespace myLed {
+//% weight=100 color=#e67e22 icon="\uf0eb"
+namespace dualLed {
+    // 默认端口
+    let redPin: DigitalPin = DigitalPin.P0
+    let greenPin: DigitalPin = DigitalPin.P1
+
     /**
-     * 点亮一个 LED 灯
-     * @param x LED 的 X 坐标，范围 0~4 eg: 2
-     * @param y LED 的 Y 坐标，范围 0~4 eg: 2
+     * 设置双色LED端口
+     * 参数使用 DigitalPin 类型，编辑器显示表格下拉
+     * @param red 红灯端口
+     * @param green 绿灯端口
      */
-    //% blockId=myLed_plot block="点亮LED x %x y %y"
-    //% x.min=0 x.max=4 y.min=0 y.max=4
-    export function plot(x: number, y: number): void {
-        led.plot(x, y)
+    //% blockId=dualLed_setup block="设置双色LED 红灯 %red 绿灯 %green"
+    //% red.defl=DigitalPin.P0 green.defl=DigitalPin.P1
+    //% inlineInputMode=inline
+    export function setup(red: DigitalPin, green: DigitalPin): void {
+        redPin = red
+        greenPin = green
+        pins.digitalWritePin(redPin, 0)
+        pins.digitalWritePin(greenPin, 0)
+    }
+
+    /**
+     * 点亮红灯
+     */
+    //% blockId=dualLed_red block="点亮红灯"
+    export function red(): void {
+        pins.digitalWritePin(redPin, 1)
+        pins.digitalWritePin(greenPin, 0)
+    }
+
+    /**
+     * 点亮绿灯
+     */
+    //% blockId=dualLed_green block="点亮绿灯"
+    export function green(): void {
+        pins.digitalWritePin(redPin, 0)
+        pins.digitalWritePin(greenPin, 1)
+    }
+
+    /**
+     * 熄灭双色LED
+     */
+    //% blockId=dualLed_off block="熄灭双色LED"
+    export function off(): void {
+        pins.digitalWritePin(redPin, 0)
+        pins.digitalWritePin(greenPin, 0)
     }
 }
