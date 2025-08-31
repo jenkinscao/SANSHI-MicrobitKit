@@ -1,0 +1,9 @@
+{
+    "name": "my-led-extension",
+    "version": "0.0.1",
+    "description": "一个点亮 micro:bit LED 的示例扩展",
+    "files": [
+        "main.ts"
+    ],
+    "public": true
+}
