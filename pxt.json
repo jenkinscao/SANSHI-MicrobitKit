@@ -1,8 +1,15 @@
 {
-    "name": "my-led-extension",
+    "name": "sanshi-microbitkit",
     "version": "0.0.1",
-    "description": "一个点亮 micro:bit LED 的示例扩展",
+    "description": "辅助中小学生开发开源硬件",
+    "icon": "icon.png",
+    "dependencies": {
+        "core": "file:../core",
+        "radio": "file:../radio",
+        "microphone": "file:../microphone"
+    },
     "files": [
+        "README.md",
         "main.ts"
     ],
     "public": true
