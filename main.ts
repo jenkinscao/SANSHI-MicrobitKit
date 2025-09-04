@@ -1,3 +1,10 @@
+enum LEDDualColor {
+    //% block="红色"
+    Red,
+    //% block="绿色" 
+    Green
+}
+
 enum LEDColor {
     //% block="红色"
     Red,
@@ -36,7 +43,7 @@ enum ButtonState {
     LongReleased = 3
 }
 
-//% groups=["双色LED", "七彩LED", "轻触按键", "倾斜传感器", "振动传感器"，"干簧管传感器"]
+//% groups=["双色LED", "七彩LED", "轻触按键", "倾斜传感器", "振动传感器"，"干簧管传感器", "有源蜂鸣器", "U型光电传感器", "TM1637四位数码管"]
 namespace 三实智能 {
 
     // 按键状态管理
@@ -65,6 +72,281 @@ namespace 三实智能 {
     let TripleBluePin: DigitalPin = DigitalPin.P2;
     let RgbLedInitialized: boolean = false;
 
+    let TM1637_CMD1 = 0x40;
+    let TM1637_CMD2 = 0xC0;
+    let TM1637_CMD3 = 0x80;
+    let _SEGMENTS = [0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07, 0x7f, 0x6f, 0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71];
+
+    /**
+     * 初始化TM1637四位数码管
+     */
+    //% group="TM1637四位数码管"
+    //% weight=100
+    export class TM1637Leds{
+        buf: Buffer;
+        clk: DigitalPin;
+        dio: DigitalPin;
+        _ON: number;
+        brightness: number;
+        count: number;
+
+        /**
+         * 初始化TM1637四位数码管
+         */
+         init():void{
+            pins.digitalWritePin(this.clk, 0);
+            pins.digitalWritePin(this.dio, 0);
+            this._ON = 8;
+            this.buf = pins.createBuffer(this.count);
+            this.clear();
+         } 
+
+         _start():void{
+            pins.digitalWritePin(this.dio, 0);
+            pins.digitalWritePin(this.clk, 0);
+         }
+
+         _stop():void{
+            pins.digitalWritePin(this.dio, 0);
+            pins.digitalWritePin(this.clk, 1);
+            pins.digitalWritePin(this.dio, 1);
+         }
+
+         _write_data_cmd():void{
+            this._start();
+            this._write_byte(TM1637_CMD1);
+            this._stop();
+         }
+
+         _write_dsp_ctrl():void{
+            this._start();
+            this._write_byte(TM1637_CMD3 | this._ON | this.brightness);
+            this._stop();
+         }
+
+         _write_byte(b: number):void{
+            for(let i = 0; i < 8; i++){
+                pins.digitalWritePin(this.dio, (b >> i) & 0x01);
+                pins.digitalWritePin(this.clk, 1);
+                pins.digitalWritePin(this.clk, 0);
+            }
+            pins.digitalWritePin(this.clk, 1);
+            pins.digitalWritePin(this.clk, 0);
+         }
+
+         /**
+          * 设置tm1637数码管亮度，范围0-8，0最暗，8最亮
+          * @param brightness 亮度, eg: 7
+          */
+        //% block="%TM1637亮度|设置亮度为 %brightness"
+        //% blockId="tm1637_set_brightness"
+        //% brightness.min=0 brightness.max=8 brightness.defl=7
+        //% group="TM1637四位数码管"
+        //% weight=90
+        setBrightness(brightness: number): void {
+            if(brightness < 0)
+            {
+                this.off();
+                return;
+            }
+            if(brightness > 8) brightness = 8;
+            this._ON = 8;
+            this.brightness = brightness - 1;
+            this._write_data_cmd();
+            this._write_dsp_ctrl();
+        }
+
+        _dat(bit:number, dat:number){
+            this._write_data_cmd();
+            this._start();
+            this._write_byte(TM1637_CMD2 | (bit % this.count));
+            this._write_byte(dat);
+            this._stop();
+            this._write_dsp_ctrl();
+        }
+
+        /**
+         * 在指定位置显示一个数字或字符
+         * @param bit 位置, eg: 0
+         * @param data 显示的数字或字符, eg: 0
+         */
+        //% block="%TM1637数码管|在位置 %bit 显示 %data"
+        //% blockId="tm1637_show_data"
+        //% bit.min=0 bit.max=3 bit.defl=0
+        //% data.min=0 data.max=15 data.defl=0
+        //% group="TM1637四位数码管"
+        //% weight=80
+        showbit(bit: number, data: number): void {
+            this.buf[bit % this.count] = _SEGMENTS[data % 16];
+            this._dat(bit, _SEGMENTS[data % 16]);
+        }
+
+        /**
+         * 显示一个数字(前导0可选择显示或不显示)
+         * @param num 要显示的数字, eg: 1234
+         * @param leadingZero 是否显示前导0, eg: false
+         */
+        //% block="%TM1637数码管|显示数字 %num |前导0 %leadingZero"
+        //% blockId="tm1637_show_number"
+        //% num.min=-999 num.max=9999 num.defl=1234
+        //% leadingZero.shadow="toggleOnOff" leadingZero.defl=false
+        //% group="TM1637四位数码管"
+        //% weight=70
+        showNumber(num: number, leadingZero: boolean): void {
+            if(num < 0){
+                this._dat(0, 0x40);
+                num = -num;
+            }
+            else{
+                if(leadingZero) this.showbit(0, Math.idiv(num, 1000) % 10);
+                else{
+                    if(num >= 1000) this.showbit(0, Math.idiv(num, 1000) % 10);
+                    else this._dat(0, 0);
+                }
+            }
+            if(leadingZero) this.showbit(1, Math.idiv(num, 100) % 10);
+            else{
+                if(num >= 100) this.showbit(1, Math.idiv(num, 100) % 10);
+                else this._dat(1, 0);
+            }
+            if(leadingZero) this.showbit(2, Math.idiv(num, 10) % 10);
+            else{
+                if(num >= 10) this.showbit(2, Math.idiv(num, 10) % 10);
+                else this._dat(2, 0);
+            }
+            this.showbit(3, num % 10);
+        }
+
+        /**
+         * 显示一个16进制数字(前导0可选择显示或不显示)
+         * @param num 要显示的16进制数字, eg: 0x1A3F
+         * @param leadingZero 是否显示前导0, eg: false
+         */
+        //% block="%TM1637数码管|显示16进制数字 %num |前导0 %leadingZero"
+        //% blockId="tm1637_show_hex"
+        //% num.min=-0xFFF num.max=0xFFFF num.defl=0x1A3F
+        //% leadingZero.shadow="toggleOnOff" leadingZero.defl=false
+        //% group="TM1637四位数码管"
+        //% weight=65
+        showHex(num: number, leadingZero: boolean): void {
+            if(num < 0){
+                this._dat(0, 0x40);
+                num = -num;
+            }
+            else{
+                if(leadingZero) this.showbit(0, (num >> 12) & 0x0F);
+                else{
+                    if(num >= 0x1000) this.showbit(0, (num >> 12) & 0x0F);
+                    else this._dat(0, 0);
+                }
+            }
+            if(leadingZero) this.showbit(1, (num >> 8) & 0x0F);
+            else{
+                if(num >= 0x100) this.showbit(1, (num >> 8) & 0x0F);
+                else this._dat(1, 0);
+            }
+            if(leadingZero) this.showbit(2, (num >> 4) & 0x0F);
+            else{
+                if(num >= 0x10) this.showbit(2, (num >> 4) & 0x0F);
+                else this._dat(2, 0);
+            }
+            this.showbit(3, num & 0x0F);
+        }
+
+
+        /**
+         * 显示一个字符串
+         * @param str 要显示的字符串, eg: "1234"
+         * */
+        //% block="%TM1637数码管|显示字符串 %str"
+        //% blockId="tm1637_show_string"
+        //% str.defl="1234"
+        //% group="TM1637四位数码管"
+        //% weight=60
+        showString(str: string): void {
+            let len = str.length;
+            if(len > this.count) len = this.count;
+            for(let i = 0; i < len; i++){
+                let c = str.charCodeAt(i);
+                if(c >= 48 && c <= 57){
+                    this.buf[i] = _SEGMENTS[c - 48];
+                }
+                else if(c >= 65 && c <= 70){
+                    this.buf[i] = _SEGMENTS[c - 55];
+                }
+                else if(c >= 97 && c <= 102){
+                    this.buf[i] = _SEGMENTS[c - 87];
+                }
+                else{
+                    this.buf[i] = 0;
+                }
+                this._dat(i, this.buf[i]);
+            }
+        }
+
+
+
+
+        /**
+         * 显示或清除冒号
+         * @param on 是否显示, eg: true
+         */
+        //% block="%TM1637数码管| 显示冒号 %on"
+        //% blockId="tm1637_show_dot"
+        //% on.shadow="toggleOnOff" on.defl=true
+        //% group="TM1637四位数码管"
+        //% weight=50
+        showDP(on: boolean): void {
+            if(on){
+                this._dat(1, this.buf[1] | 0x80);
+            }
+            else{
+                this._dat(1, this.buf[1] & 0x7F);
+            }
+        }
+
+        /**
+         * 关闭数码管显示
+         */
+        //% block="%TM1637数码管|关闭显示"
+        //% blockId="tm1637_off"
+        //% group="TM1637四位数码管"
+        //% weight=10
+        clear(): void {
+            for(let i = 0; i < this.count; i++){
+                this._dat(i, 0);
+                this.buf[i] = 0;
+            }
+        }
+
+        /**
+         * 开启LED显示
+         */
+        //% block="%TM1637数码管|开启LED显示"
+        //% blockId="tm1637_on"
+        //% group="TM1637四位数码管"
+        //% weight=30
+        on(): void {
+            this._ON = 8;
+            this._write_data_cmd();
+            this._write_dsp_ctrl();
+        }
+
+        /**
+         * 关闭LED显示
+         * */
+        //% block="%TM1637数码管|关闭LED显示"
+        //% blockId="tm1637_off_display"
+        //% group="TM1637四位数码管"
+        //% weight=20
+        off(): void {
+            this._ON = 0;
+            this._write_data_cmd();
+            this._write_dsp_ctrl();
+        }
+
+    }
+
 
     /**
      * 初始化双色LED引脚
@@ -91,7 +373,7 @@ namespace 三实智能 {
      * 设置红色/绿色LED开关
      * @param redPin 红色LED引脚, eg: DigitalPin.P0
      * @param greenPin 绿色LED引脚, eg: DigitalPin.P1
-     * @param color 选择颜色, eg: LEDColor.Red
+     * @param color 选择颜色, eg: LEDDualColor.Red
      * @param state LED状态, eg: true
      */
     //% block="双色LED颜色为 $color 灯 $state"
@@ -100,16 +382,16 @@ namespace 三实智能 {
     //% state.defl=true
     //% group="双色LED"
     //% weight=90
-    export function setDualColorLed(color: LEDColor, state: boolean): void {
+    export function setDualColorLed(color: LEDDualColor, state: boolean): void {
         if(!DualLedInitialized) {
             basic.showString("NOT INIT LED!");
             return;
         }
 
-        if (color == LEDColor.Red) {
+        if (color == LEDDualColor.Red) {
             pins.digitalWritePin(DualRedPin, state ? 1 : 0);
             pins.digitalWritePin(DualGreenPin, 0); // 关闭绿色
-        } else if (color == LEDColor.Green) {
+        } else if (color == LEDDualColor.Green) {
             pins.digitalWritePin(DualGreenPin, state ? 1 : 0);
             pins.digitalWritePin(DualRedPin, 0); // 关闭红色
         }
@@ -117,7 +399,7 @@ namespace 三实智能 {
 
    /**
     * 单个引脚LED持续时间闪烁
-    * @param color 选择颜色, eg: LEDColor.Red
+    * @param color 选择颜色, eg: LEDDualColor.Red
     * @param times 闪烁次数, eg: 1
     * @param interval 闪烁间隔时间(ms), eg: 200
     */
@@ -127,7 +409,7 @@ namespace 三实智能 {
     //% interval.min=50 interval.max=2000 interval.defl=200
     //% group="双色LED"
     //% weight=80
-    export function blinkDualColorLed(color: LEDColor, times: number, interval: number): void {
+    export function blinkDualColorLed(color: LEDDualColor, times: number, interval: number): void {
         if(!DualLedInitialized) {
             basic.showString("NOT INIT LED!");
             return;
@@ -151,16 +433,16 @@ namespace 三实智能 {
     //% interval.min=50 interval.max=2000 interval.defl=200
     //% group="双色LED"
     //% weight=70
-    export function blinkBothColorLed(color: LEDColor, times: number, interval: number): void {
+    export function blinkBothColorLed(color: LEDDualColor, times: number, interval: number): void {
         if(!DualLedInitialized) {
             basic.showString("NOT INIT LED!");
             return;
         }
         let firstColor = color;
-        let secondColor = (color == LEDColor.Red) ? LEDColor.Green : LEDColor.Red;
+        let secondColor = (color == LEDDualColor.Red) ? LEDDualColor.Green : LEDDualColor.Red;
 
         for (let i = 0; i < times; i++) {
-            if(firstColor == LEDColor.Red) {
+            if(firstColor == LEDDualColor.Red) {
                 pins.digitalWritePin(DualGreenPin, 0); // 关闭绿色
                 pins.digitalWritePin(DualRedPin, 1); // 打开红色
             }else {
@@ -168,7 +450,7 @@ namespace 三实智能 {
                 pins.digitalWritePin(DualGreenPin, 1); // 打开绿色
             }
             basic.pause(interval);
-            if(secondColor == LEDColor.Green) {
+            if(secondColor == LEDDualColor.Green) {
                 pins.digitalWritePin(DualRedPin, 0); // 关闭红色
                 pins.digitalWritePin(DualGreenPin, 1); // 打开绿色
             }else {
@@ -178,12 +460,12 @@ namespace 三实智能 {
             basic.pause(interval);
         }
         // 结束后关闭所有LED
-        setDualColorLed(LEDColor.Red, false);   
+        setDualColorLed(LEDDualColor.Red, false);   
     }
 
     /**
      * 双色LED呼吸灯
-     * @param color 选择颜色, eg: LEDColor.Red
+     * @param color 选择颜色, eg: LEDDualColor.Red
      * @param duration 呼吸周期时间(ms), eg: 2000
      * */
     //% block="双色LED颜色为 $color 呼吸灯|周期时间(ms) $duration"
@@ -191,12 +473,12 @@ namespace 三实智能 {
     //% duration.min=500 duration.max=10000 duration.defl=2000
     //% group="双色LED"
     //% weight=60
-    export function breatheDualColorLed(color: LEDColor, duration: number): void {
+    export function breatheDualColorLed(color: LEDDualColor, duration: number): void {
         if(!DualLedInitialized) {
             basic.showString("NOT INIT LED!");
             return;
         }
-        let pin = (color == LEDColor.Red) ? DualRedPin : DualGreenPin;
+        let pin = (color == LEDDualColor.Red) ? DualRedPin : DualGreenPin;
         let steps = 50; // 呼吸灯渐变步数
         let stepDelay = duration / (steps * 2); // 每步延时
 
@@ -701,4 +983,67 @@ namespace 三实智能 {
         return reading === 0; // 被触发时引脚为低电平
     }
 
+    /**
+     * 有源蜂鸣器发声
+     * @param pin 蜂鸣器引脚, eg: DigitalPin.P0
+     * @param state 发声状态, eg: true
+     */
+    //% block="有源蜂鸣器 $pin 发声 $state"
+    //% blockId="buzzer_sound"
+    //% pin.fieldEditor="gridpicker" pin.fieldOptions.columns=4
+    //% state.shadow="toggleOnOff"
+    //% state.defl=true
+    //% group="有源蜂鸣器"
+    //% weight=100
+    export function buzzerSound(pin: DigitalPin, state: boolean): void {
+        if (!state) {
+            pins.digitalWritePin(pin, 1); // 发声
+        } else {
+            pins.digitalWritePin(pin, 0); // 停止发声
+        }
+    }
+
+    /**
+     * U型光电传感器是否被触发
+     * @param pin U型光电传感器引脚, eg: DigitalPin.P0
+     */
+    //% block="U型光电传感器 $pin 被触发"
+    //% blockId="read_photoelectric_sensor"
+    //% pin.fieldEditor="gridpicker" pin.fieldOptions.columns=4
+    //% group="U型光电传感器"
+    //% weight=90
+    export function readPhotoelectricSensor(pin: DigitalPin): boolean {
+        // 设置上拉电阻
+        pins.setPull(pin, PinPullMode.PullUp);
+        let reading = pins.digitalReadPin(pin);
+        return !!reading; // 被触发时引脚为低电平
+    }
+
+    /**
+     * 生成TM1637数码管对象
+     * @param clkPin CLK引脚, eg: DigitalPin.P0
+     * @param dioPin DIO引脚, eg: DigitalPin.P1
+     * @param brightness 亮度(0-7), eg: 7
+     * @param count LED位数(1-4), eg: 4
+     */
+    //% block="CLK引脚 %clkPin| DIO引脚 %dioPin| 亮度 %brightness| LED位数 %count"
+    //% blockId="create_tm1637_display"
+    //% clkPin.fieldEditor="gridpicker" clkPin.fieldOptions.columns=4
+    //% dioPin.fieldEditor="gridpicker" dioPin.fieldOptions.columns=4
+    //% brightness.min=0 brightness.max=7 brightness.defl=7
+    //% count.min=1 count.max=4 count.defl=4
+    //% group="TM1637四位数码管"
+    //% weight=110
+    export function createTm1637Display(clkPin: DigitalPin, dioPin: DigitalPin, brightness: number, count: number): TM1637Leds {
+        let display = new TM1637Leds();
+        display.clk = clkPin;
+        display.dio = dioPin;
+        if(count < 1 || count > 4) {
+            count = 4; // 默认4位数码管
+        }
+        display.count = count;
+        display.brightness = brightness;
+        display.init();
+        return display;
+    }
 }
