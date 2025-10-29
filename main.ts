@@ -364,16 +364,14 @@ namespace 三实智能 {
         //% group="TM1637四位数码管"
         //% weight=110
         createTm1637Display(clkPin: DigitalPin, dioPin: DigitalPin, brightness: number, count: number): void {
-            let display = new TM1637Leds();
-            display.clk = clkPin;
-            display.dio = dioPin;
+            this.clk = clkPin;
+            this.dio = dioPin;
             if(count < 1 || count > 4) {
                 count = 4; // 默认4位数码管
             }
-            display.count = count;
-            display.brightness = brightness;
-            display.init();
-            this = display;
+            this.count = count;
+            this.brightness = brightness;
+            this.init();
         }
     }
 
