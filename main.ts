@@ -1026,7 +1026,7 @@ namespace 三实智能 {
      * @param brightness 亮度(0-7), eg: 7
      * @param count LED位数(1-4), eg: 4
      */
-    //% block="CLK引脚 %clkPin| DIO引脚 %dioPin| 亮度 %brightness| LED位数 %count"
+    //% block="%TM1637CLK引脚 %clkPin| DIO引脚 %dioPin| 亮度 %brightness| LED位数 %count"
     //% blockId="create_tm1637_display"
     //% clkPin.fieldEditor="gridpicker" clkPin.fieldOptions.columns=4
     //% dioPin.fieldEditor="gridpicker" dioPin.fieldOptions.columns=4
