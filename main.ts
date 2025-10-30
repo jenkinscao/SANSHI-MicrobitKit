@@ -90,8 +90,6 @@ namespace 三实智能 {
         brightness: number;
         count: number;
 
-
-
         /**
          * 初始化TM1637四位数码管
          */
@@ -347,32 +345,6 @@ namespace 三实智能 {
             this._write_dsp_ctrl();
         }
 
-
-        /**
-         * 生成TM1637数码管对象
-         * @param clkPin CLK引脚, eg: DigitalPin.P0
-         * @param dioPin DIO引脚, eg: DigitalPin.P1
-         * @param brightness 亮度(0-7), eg: 7
-         * @param count LED位数(1-4), eg: 4
-         */
-        //% block="%TM1637 CLK引脚 %clkPin| DIO引脚 %dioPin| 亮度 %brightness| LED位数 %count"
-        //% blockId="create_tm1637_display"
-        //% clkPin.fieldEditor="gridpicker" clkPin.fieldOptions.columns=4
-        //% dioPin.fieldEditor="gridpicker" dioPin.fieldOptions.columns=4
-        //% brightness.min=0 brightness.max=7 brightness.defl=7
-        //% count.min=1 count.max=4 count.defl=4
-        //% group="TM1637四位数码管"
-        //% weight=110
-        createTm1637Display(clkPin: DigitalPin, dioPin: DigitalPin, brightness: number, count: number): void {
-            this.clk = clkPin;
-            this.dio = dioPin;
-            if(count < 1 || count > 4) {
-                count = 4; // 默认4位数码管
-            }
-            this.count = count;
-            this.brightness = brightness;
-            this.init();
-        }
     }
 
 
@@ -1046,4 +1018,35 @@ namespace 三实智能 {
         let reading = pins.digitalReadPin(pin);
         return !!reading; // 被触发时引脚为低电平
     }
+
+    /**
+     * 创建TM1637数码管对象
+     * @param clkPin CLK引脚, eg: DigitalPin.P0
+     * @param dioPin DIO引脚, eg: DigitalPin.P1
+     * @param brightness 亮度(0-7), eg: 7
+     * @param count LED位数(1-4), eg: 4
+     */
+    //% block="创建TM1637数码管|CLK引脚 %clkPin| DIO引脚 %dioPin| 亮度 %brightness| LED位数 %count"
+    //% blockId="create_tm1637_display"
+    //% clkPin.fieldEditor="gridpicker" clkPin.fieldOptions.columns=4
+    //% dioPin.fieldEditor="gridpicker" dioPin.fieldOptions.columns=4
+    //% brightness.min=0 brightness.max=7 brightness.defl=7
+    //% count.min=1 count.max=4 count.defl=4
+    //% blockSetVariable=TM1637
+    //% group="TM1637四位数码管"
+    //% weight=110
+    export function createTm1637Display(clkPin: DigitalPin, dioPin: DigitalPin, brightness: number, count: number): TM1637Leds{
+        let display = new TM1637Leds();
+        display.clk = clkPin;
+        display.dio = dioPin;
+        if(count < 1 || count > 4) {
+            count = 4; // 默认4位数码管
+        }
+        display.count = count;
+        display.brightness = brightness;
+        display.init();
+        return display;
+    }
 }
+
+
