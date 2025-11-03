@@ -43,7 +43,36 @@ enum ButtonState {
     LongReleased = 3
 }
 
-//% groups=["双色LED", "七彩LED", "轻触按键", "倾斜传感器", "振动传感器"，"干簧管传感器", "有源蜂鸣器", "U型光电传感器", "TM1637四位数码管"]
+//HW-504遥感器方向
+enum HW504DirectionEvent {
+    //% block="中间"
+    Center,
+    //% block="上"
+    Up,
+    //% block="下"
+    Down,
+    //% block="左"
+    Left,
+    //% block="右"
+    Right,
+    //% block="上左"
+    UpLeft,
+    //% block="上右"
+    UpRight,
+    //% block="下左"
+    DownLeft,
+    //% block="下右"
+    DownRight
+}
+
+enum SoilMoistureEvent {
+    //% block="干燥"
+    Dry,
+    //% block="湿润"
+    Wet
+}
+
+//% groups=["双色LED", "七彩LED", "轻触按键", "倾斜传感器", "振动传感器"，"干簧管传感器", "有源蜂鸣器", "U型光电传感器", "TM1637四位数码管", "HW-504双轴遥感器", "土壤温湿度传感器"]
 namespace 三实智能 {
 
     // 按键状态管理
@@ -71,6 +100,16 @@ namespace 三实智能 {
     let TripleGreenPin: DigitalPin = DigitalPin.P1;
     let TripleBluePin: DigitalPin = DigitalPin.P2;
     let RgbLedInitialized: boolean = false;
+
+    let HW504_XPin: AnalogPin;
+    let HW504_YPin: AnalogPin;
+    let HW504_Initialized: boolean = false;
+    let HW504_SWPin: DigitalPin;
+    let HW504_SwitchInitialized: boolean = false;
+
+    let SoilMoisture_AnalogPin: AnalogPin;
+    let SoilMoisture_DigitalPin: DigitalPin;
+    let SoilMoisture_Initialized: boolean = false;
 
     let TM1637_CMD1 = 0x40;
     let TM1637_CMD2 = 0xC0;
@@ -1047,6 +1086,159 @@ namespace 三实智能 {
         display.init();
         return display;
     }
+
+    /**
+     * 创建HW-504双轴遥感器对象
+     * @param xPin X轴引脚, eg: AnalogPin.P0
+     * @param yPin Y轴引脚, eg: AnalogPin.P1
+     * @param SW 按键引脚, eg: DigitalPin.P2 
+     */
+    //% block="创建HW-504双轴遥感器|X轴引脚 %xPin|Y轴引脚 %yPin|按键引脚 %SW"
+    //% blockId="create_hw504_joystick"
+    //% xPin.fieldEditor="gridpicker" xPin.fieldOptions.columns=4
+    //% yPin.fieldEditor="gridpicker" yPin.fieldOptions.columns=4
+    //% SW.fieldEditor="gridpicker" SW.fieldOptions.columns=4
+    //% group="HW-504双轴遥感器"
+    //% weight=100
+    export function createHW504Joystick(xPin: AnalogPin, yPin: AnalogPin, SW: DigitalPin): void {
+
+        HW504_XPin = xPin;
+        HW504_YPin = yPin;
+        HW504_SWPin = SW;
+        // 设置按键引脚上拉电阻
+        pins.setPull(HW504_SWPin, PinPullMode.PullUp);
+        HW504_Initialized = true;
+        HW504_SwitchInitialized = true;
+    }
+
+    /**
+     * 获取HW-504双轴遥感器的X轴值
+     */
+    //% block="获取HW-504双轴遥感器X轴值"
+    //% blockId="get_hw504_x_axis"
+    //% group="HW-504双轴遥感器"
+    //% weight=80
+    export function getHW504XAxis(): number {
+        if (!HW504_Initialized) {
+            return 0;
+        }
+        return pins.analogReadPin(HW504_XPin);
+    }
+
+    /**
+     * 获取HW-504双轴遥感器的Y轴值
+     */
+    //% block="获取HW-504双轴遥感器Y轴值"
+    //% blockId="get_hw504_y_axis"
+    //% group="HW-504双轴遥感器"
+    //% weight=80
+    export function getHW504YAxis(): number {
+        if (!HW504_Initialized) {
+            return 0;
+        }
+        return pins.analogReadPin(HW504_YPin);
+    }
+
+    /**
+     * HW-504双轴遥感器按下状态
+     */
+    //% block="HW-504双轴遥感器按键被按下"
+    //% blockId="check_hw504_switch_pressed"
+    //% group="HW-504双轴遥感器"
+    //% weight=70
+    export function checkHW504SwitchPressed(): boolean {
+        if (!HW504_SwitchInitialized) {
+            return false;
+        }
+        return pins.digitalReadPin(HW504_SWPin) === 0;
+    }
+
+    /**
+     * 判断HW-504双轴遥感器的方向状态
+     * @param direction 方向枚举, eg: JoystickDirection.Up
+     * */
+    //% block="HW-504双轴遥感器|方向 $direction 被触发"
+    //% blockId="check_hw504_direction"
+    //% group="HW-504双轴遥感器"
+    //% weight=80
+    export function checkHW504Direction(direction: HW504DirectionEvent): boolean {
+        if (!HW504_Initialized) {
+            return false;
+        }
+        switch (direction) {
+            case HW504DirectionEvent.Up:
+                return getHW504XAxis() >= 500 && getHW504XAxis() <= 520 && getHW504YAxis() < 100;
+            case HW504DirectionEvent.Down:
+                return getHW504YAxis() > 900 && getHW504XAxis() >= 500 && getHW504XAxis() <= 520;
+            case HW504DirectionEvent.Left:
+                return getHW504XAxis() < 100 && getHW504YAxis() >= 490 && getHW504YAxis() <= 510;
+            case HW504DirectionEvent.Right:
+                return getHW504XAxis() > 900 && getHW504YAxis() >= 490 && getHW504YAxis() <= 510;
+            case HW504DirectionEvent.Center:
+                return getHW504XAxis() >= 500 && getHW504XAxis() <= 520 &&
+                       getHW504YAxis() >= 490 && getHW504YAxis() <= 510;
+            case HW504DirectionEvent.UpLeft:
+                return getHW504XAxis() < 100 && getHW504YAxis() < 100;
+            case HW504DirectionEvent.UpRight:
+                return getHW504XAxis() > 900 && getHW504YAxis() < 100;
+            case HW504DirectionEvent.DownLeft:
+                return getHW504XAxis() < 100 && getHW504YAxis() > 900;
+            case HW504DirectionEvent.DownRight:
+                return getHW504XAxis() > 900 && getHW504YAxis() > 900;
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * 土壤湿度传感器初始化
+     * @param analogPin 土壤湿度传感器模拟引脚, eg: AnalogPin.P0
+     * @param digitalPin 土壤湿度传感器数字引脚, eg: DigitalPin.P1
+     */
+    //% block="初始化土壤湿度传感器|模拟引脚 %analogPin|数字引脚 %digitalPin"
+    //% blockId="init_soil_moisture"
+    //% group="土壤温湿度传感器"
+    //% weight=100
+    export function initSoilMoisture(analogPin: AnalogPin, digitalPin: DigitalPin): void {
+        SoilMoisture_AnalogPin = analogPin;
+        SoilMoisture_DigitalPin = digitalPin;
+        // 设置数字引脚上拉电阻
+        pins.setPull(SoilMoisture_DigitalPin, PinPullMode.PullUp);
+        SoilMoisture_Initialized = true;
+    }
+
+    /**
+     * 读取土壤湿度传感器模拟值(0-1023)
+     */
+    //% block="读取土壤湿度传感器模拟值"
+    //% blockId="read_soil_moisture_analog"
+    //% group="土壤温湿度传感器"
+    //% weight=90
+    export function readSoilMoistureAnalog(): number {
+        if (!SoilMoisture_Initialized) {
+            return -1;
+        }
+        return pins.analogReadPin(SoilMoisture_AnalogPin);
+    }
+
+    /**
+     * 判断土壤湿度传感器状态(干燥/湿润)
+     * @param state 土壤湿度状态, eg: SoilMoistureState.Wet
+     */
+    //% block="土壤湿度传感器状态为 $state"
+    //% blockId="read_soil_moisture_digital"
+    //% group="土壤温湿度传感器"
+    //% weight=80
+    export function readSoilMoistureDigital(state:SoilMoistureEvent): boolean {
+
+        if (!SoilMoisture_Initialized) {
+            return false;
+        }
+        let reading = pins.digitalReadPin(SoilMoisture_DigitalPin);
+        if(state == SoilMoistureEvent.Wet) {
+            return reading === 0; // 湿润时引脚为低电平
+        } else {
+            return reading === 1; // 干燥时引脚为高电平
+        }
+    }
 }
-
-
