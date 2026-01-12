@@ -1,16 +1,15 @@
 {
     "name": "sanshi-microbitkit",
-    "version": "0.0.1",
-    "description": "辅助中小学生开发开源硬件",
-    "icon": "icon.png",
+    "version": "0.0.2",
     "dependencies": {
-        "core": "file:../core",
-        "radio": "file:../radio",
-        "microphone": "file:../microphone"
+        "core": "*",
+        "radio": "*",
+        "microphone": "*"
     },
     "files": [
         "README.md",
-        "main.ts"
+        "main.ts",
+        "motorx.cpp"
     ],
     "public": true
 }
