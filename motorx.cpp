@@ -3,7 +3,7 @@ using namespace pxt;
 
 namespace motorx {
 
-// ===================== PCA9685 I2C È©±Âä® =====================
+// ===================== PCA9685 I2C «˝∂Ø (±£≥÷≤ª±‰) =====================
 static const uint8_t PCA_ADDR = 0x40;
 static bool g_inited = false;
 static const uint8_t MODE1 = 0x00;
@@ -51,8 +51,8 @@ static void pca9685_setDuty(uint8_t ch, uint16_t duty4095) {
 static void initOnce() {
     if (g_inited) return;
     g_inited = true;
-    i2cWriteReg(MODE1, 0x20 | 0x01); // ÂºÄÂêØËá™Â¢û
-    // ËÆæÁΩÆÈ¢ëÁéá 50Hz
+    i2cWriteReg(MODE1, 0x20 | 0x01); // ø™∆Ù◊‘‘ˆ
+    // …Ë÷√∆µ¬  50Hz
     float prescaleval = 25000000.0f / 4096.0f / 50.0f - 1.0f;
     uint8_t prescale = (uint8_t)(prescaleval + 0.5f);
     uint8_t oldmode = i2cReadReg(MODE1);
@@ -64,18 +64,39 @@ static void initOnce() {
     for (int ch = 0; ch < 16; ch++) pca9685_setDuty((uint8_t)ch, 0);
 }
 
-// ===================== ÁîµÊú∫ÊéßÂà∂ (Á°¨‰ª∂Â±Ç) =====================
+// ===================== µÁª˙øÿ÷∆ (∏¸–¬Œ™4¬∑”≥…‰) =====================
+// ”≥…‰∂®“Â:
+// M1 («∞◊Û): AIN1(PWM0), AIN2(PWM1)
+// M2 («∞”“): BIN2(PWM3+), BIN1(PWM2-) -> ◊¢“‚’‚¿ÔµƒÀ≥–Ú
+// M3 (∫Û◊Û): AIN1(PWM4), AIN2(PWM5)
+// M4 (∫Û”“): BIN2(PWM7+), BIN1(PWM6-)
+
 static void motor_run(int motorId, int speed) {
     initOnce();
     if (speed > 100) speed = 100;
     if (speed < -100) speed = -100;
+    
+    // ”≥…‰ÀŸ∂»µΩ PWM ’ºø’±»
     uint16_t duty = (uint16_t)((abs(speed) * 4095) / 100);
     
-    int chA, chB;
-    if (motorId == 1) { // Â∑¶ÁîµÊú∫ (‰øÆÊ≠£ÊûÅÊÄß: Ê≠£Êï∞ÂâçËøõ)
-        chA = 0; chB = 1;
-    } else { // Âè≥ÁîµÊú∫
-        chA = 5; chB = 4;
+    int chA = 0; // ’˝œÚ“˝Ω≈
+    int chB = 0; // ∑¥œÚ“˝Ω≈
+
+    switch(motorId) {
+        case 1: // M1 «∞◊Û
+            chA = 0; chB = 1; 
+            break;
+        case 2: // M2 «∞”“
+            chA = 3; chB = 2; 
+            break;
+        case 3: // M3 ∫Û◊Û
+            chA = 4; chB = 5; 
+            break;
+        case 4: // M4 ∫Û”“
+            chA = 7; chB = 6; 
+            break;
+        default:
+            return; // Œﬁ–ßID
     }
 
     if (speed > 0) {
@@ -87,7 +108,7 @@ static void motor_run(int motorId, int speed) {
     }
 }
 
-// ===================== ÁºñÁ†ÅÂô® (ÂèåË∑Ø‰∏≠Êñ≠) =====================
+// ===================== ±‡¬Î∆˜ (±£≥÷≤ª±‰£¨Õ®≥£÷ªΩ”¡Ω¬∑) =====================
 static const int8_t QDEC_TABLE[16] = {0, 1, -1, 0, -1, 0, 0, 1, 1, 0, 0, -1, 0, -1, 1, 0};
 struct QDec { MicroBitPin *A; MicroBitPin *B; volatile int32_t count; uint8_t prev; };
 static QDec encLeft;
@@ -132,7 +153,6 @@ static void encInitOnce() {
     encRight.A->eventOn(MICROBIT_PIN_EVENT_ON_EDGE);
     encRight.B->eventOn(MICROBIT_PIN_EVENT_ON_EDGE);
 
-    // ÁõëÂê¨ P0, P1, P2, P8
     uBit.messageBus.listen(MICROBIT_ID_IO_P0, MICROBIT_EVT_ANY, onEncLeftEvent);
     uBit.messageBus.listen(MICROBIT_ID_IO_P1, MICROBIT_EVT_ANY, onEncLeftEvent);
     uBit.messageBus.listen(MICROBIT_ID_IO_P2, MICROBIT_EVT_ANY, onEncRightEvent);
@@ -145,7 +165,11 @@ void initNative() { initOnce(); }
 //% shim=motorx::setMotorSpeedNative
 void setMotorSpeedNative(int id, int spd) { motor_run(id, spd); }
 //% shim=motorx::stopNative
-void stopNative() { initOnce(); pca9685_setDuty(0,0); pca9685_setDuty(1,0); pca9685_setDuty(4,0); pca9685_setDuty(5,0); }
+void stopNative() { 
+    initOnce(); 
+    // Õ£÷πÀ˘”–Õ®µ¿ 0-7 (M1-M4)
+    for(int i=0; i<=7; i++) pca9685_setDuty(i, 0);
+}
 //% shim=motorx::encResetNative
 void encResetNative() { encInitOnce(); encLeft.count = 0; encRight.count = 0; }
 //% shim=motorx::encCountLeftNative
