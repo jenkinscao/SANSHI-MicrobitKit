@@ -3,12 +3,11 @@ using namespace pxt;
 
 namespace motorx {
 
-// ===================== PCA9685 I2C Çý¶¯ =====================
+// ===================== PCA9685 I2C é©±åŠ¨ =====================
 static const uint8_t PCA_ADDR = 0x40;
 static bool g_inited = false;
 static const uint8_t MODE1 = 0x00;
-static const uint8_t MODE2 = 0x01; // <--- ÐÂÔö¼Ä´æÆ÷µØÖ·
-static const uint8_t PRESCALE = 0xFE;
+static const uint8_t MODE2 = 0x01; // å…³é”®é…ç½®
 static const uint8_t LED0_ON_L = 0x06;
 
 static void i2cWriteReg(uint8_t reg, uint8_t val) {
@@ -53,40 +52,26 @@ static void initOnce() {
     if (g_inited) return;
     g_inited = true;
     
-    // 1. ¸´Î»
-    i2cWriteReg(MODE1, 0x00); 
-
-    // 2. ¹Ø¼üÐÞ¸´£ºÉèÖÃ MODE2 Îª 0x04 (OUTDRV=1, Totem Pole ÍÆÍìÊä³ö)
-    // ÕâÑùÒý½Å²ÅÄÜÇ¿Á¦Êä³ö¸ßµçÆ½£¬Çý¶¯ HR8833
-    i2cWriteReg(MODE2, 0x04); 
-
-    // 3. ÉèÖÃ MODE1 (¿ªÆô×ÔÔö)
+    // ä¿®å¤ï¼šå¼ºåˆ¶é…ç½®ä¸ºæŽ¨æŒ½è¾“å‡º (Totem Pole)ï¼Œè§£å†³ç”µåŽ‹è¢«æ‹‰ä½Žé—®é¢˜
+    i2cWriteReg(MODE1, 0x00); // å¤ä½
+    i2cWriteReg(MODE2, 0x04); // OUTDRV=1
+    
+    // è®¾ç½®é¢‘çŽ‡ 50Hz
     i2cWriteReg(MODE1, 0x20 | 0x01); 
-
-    // 4. ÉèÖÃÆµÂÊ 50Hz
-    // 25MHz / 4096 / 50Hz - 1 = ~121
     float prescaleval = 25000000.0f / 4096.0f / 50.0f - 1.0f;
     uint8_t prescale = (uint8_t)(prescaleval + 0.5f);
-    
     uint8_t oldmode = i2cReadReg(MODE1);
-    uint8_t newmode = (oldmode & 0x7F) | 0x10; // Sleep mode to set prescale
-    i2cWriteReg(MODE1, newmode);
+    i2cWriteReg(MODE1, (oldmode & 0x7F) | 0x10);
     i2cWriteReg(PRESCALE, prescale);
     i2cWriteReg(MODE1, oldmode);
-    
     fiber_sleep(5);
-    i2cWriteReg(MODE1, oldmode | 0xA1); // Auto-increment on, restart
-
-    // 5. ³õÊ¼»¯ËùÓÐÍ¨µÀÎª0
+    i2cWriteReg(MODE1, oldmode | 0xA1); 
+    
+    // åˆå§‹å…¨åœ
     for (int ch = 0; ch < 16; ch++) pca9685_setDuty((uint8_t)ch, 0);
 }
 
-// ===================== µç»ú¿ØÖÆ =====================
-// M1: PWM0, PWM1
-// M2: PWM3, PWM2
-// M3: PWM4, PWM5
-// M4: PWM7, PWM6
-
+// ===================== ç”µæœºæŽ§åˆ¶ (ä¿®æ­£æžæ€§) =====================
 static void motor_run(int motorId, int speed) {
     initOnce();
     if (speed > 100) speed = 100;
@@ -97,26 +82,36 @@ static void motor_run(int motorId, int speed) {
     int chA = 0; 
     int chB = 0; 
 
+    // æ ¹æ®ä½ çš„æµ‹è¯•ç»“æžœï¼Œæˆ‘è°ƒæ•´äº†è¿™é‡Œçš„ A/B é¡ºåº
     switch(motorId) {
-        case 1: chA = 0; chB = 1; break; // M1
-        case 2: chA = 3; chB = 2; break; // M2
-        case 3: chA = 4; chB = 5; break; // M3
-        case 4: chA = 7; chB = 6; break; // M4
-        default: return; 
+        case 1: // M1 å‰å·¦ (ä¿®æ­£ï¼šä¹‹å‰æ˜¯0/1ï¼Œå¯¼è‡´åè½¬ï¼ŒçŽ°åœ¨æ”¹ä¸º1/0)
+            chA = 1; chB = 0; 
+            break;
+        case 2: // M2 å‰å³ (ä¿æŒï¼šä¹‹å‰æµ‹å¾—æ˜¯æ­£æ•°)
+            chA = 3; chB = 2; 
+            break;
+        case 3: // M3 åŽå·¦ (é€šå¸¸ä¸ŽM1åŒä¾§ï¼Œæˆ‘é¢„å…ˆä¿®æ­£ä¸º 5/4)
+            chA = 5; chB = 4; 
+            break;
+        case 4: // M4 åŽå³ (é€šå¸¸ä¸ŽM2åŒä¾§ï¼Œä¿æŒ 7/6)
+            chA = 7; chB = 6; 
+            break;
+        default: return;
     }
 
     if (speed > 0) {
+        // æ­£è½¬
         pca9685_setDuty(chA, duty); pca9685_setDuty(chB, 0);
     } else if (speed < 0) {
+        // åè½¬
         pca9685_setDuty(chA, 0); pca9685_setDuty(chB, duty);
     } else {
+        // åœæ­¢
         pca9685_setDuty(chA, 0); pca9685_setDuty(chB, 0);
     }
 }
 
-// ===================== ±àÂëÆ÷ (Ë«Â·) =====================
-// (Õâ²¿·Ö´úÂë±£³ÖÄãÔ­À´µÄ£¬»òÕßÉÏÃæ¸ø³öµÄ°æ±¾£¬´Ë´¦Ê¡ÂÔÒÔ½ÚÊ¡Æª·ù£¬¹¦ÄÜ²»ÊÜÓ°Ïì)
-// ... ±àÂëÆ÷´úÂëÕ³ÌùÔÚÕâÀï ...
+// ===================== ç¼–ç å™¨ (ä¿æŒä¸å˜) =====================
 static const int8_t QDEC_TABLE[16] = {0, 1, -1, 0, -1, 0, 0, 1, 1, 0, 0, -1, 0, -1, 1, 0};
 struct QDec { MicroBitPin *A; MicroBitPin *B; volatile int32_t count; uint8_t prev; };
 static QDec encLeft;
