@@ -48,7 +48,7 @@ enum MoveDir {
     RightBack
 }
 
-//% color=#FF7A00 icon="\uf1b9" block="机器人控制V0.3"
+//% color=#FF7A00 icon="\uf1b9" block="机器人控制V0.31"
 namespace motorx {
 
     let lineLogic = 1; 
@@ -135,9 +135,9 @@ namespace motorx {
     //% weight=79
     export function mecanumSpin(left: boolean, speed: number): void {
         if (left) {
-            setAll(speed, -speed, speed, -speed);
+            setAll(speed, speed, -speed, -speed);
         } else {
-            setAll(-speed, speed, -speed, speed);
+            setAll(-speed, -speed, speed, speed);
         }
     }
 
