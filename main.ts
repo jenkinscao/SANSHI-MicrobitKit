@@ -108,13 +108,13 @@ namespace motorx {
     export function mecanumMove(dir: MoveDir, speed: number): void {
         let s = speed;
         switch (dir) {
-            case MoveDir.Right:
-                setAll(s, s, s, s); break;
-            case MoveDir.Left:
-                setAll(-s, -s, -s, -s); break;
             case MoveDir.Back:
-                setAll(-s, s, s, -s); break;
+                setAll(s, s, s, s); break;
             case MoveDir.Forward:
+                setAll(-s, -s, -s, -s); break;
+            case MoveDir.Right:
+                setAll(-s, s, s, -s); break;
+            case MoveDir.Left:
                 setAll(s, -s, -s, s); break;
             case MoveDir.LeftFront:
                 setAll(0, s, s, 0); break;
@@ -134,7 +134,7 @@ namespace motorx {
     //% group="四轮麦克纳姆"
     //% weight=79
     export function mecanumSpin(left: boolean, speed: number): void {
-        if (!left) {
+        if (left) {
             setAll(-speed, speed, -speed, speed);
         } else {
             setAll(speed, -speed, speed, -speed);
