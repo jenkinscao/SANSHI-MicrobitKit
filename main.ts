@@ -135,9 +135,9 @@ namespace motorx {
     //% weight=79
     export function mecanumSpin(left: boolean, speed: number): void {
         if (left) {
-            setAll(-speed, speed, -speed, speed);
-        } else {
             setAll(speed, -speed, speed, -speed);
+        } else {
+            setAll(-speed, speed, -speed, speed);
         }
     }
 
