@@ -120,9 +120,9 @@ namespace motorx {
                 setAll(0, s, s, 0); break;
             case MoveDir.RightFront:
                 setAll(s, 0, 0, s); break;
-            case MoveDir.RightBack:
-                setAll(-s, 0, 0, -s); break;
             case MoveDir.LeftBack:
+                setAll(-s, 0, 0, -s); break;
+            case MoveDir.RightBack:
                 setAll(0, -s, -s, 0); break;
         }
     }
