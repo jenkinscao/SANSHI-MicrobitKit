@@ -3,11 +3,10 @@ using namespace pxt;
 
 namespace motorx {
 
-// ===================== PCA9685 I2C 驱动 =====================
 static const uint8_t PCA_ADDR = 0x40;
 static bool g_inited = false;
 static const uint8_t MODE1 = 0x00;
-static const uint8_t MODE2 = 0x01; // <--- 新增寄存器地址
+static const uint8_t MODE2 = 0x01;
 static const uint8_t PRESCALE = 0xFE;
 static const uint8_t LED0_ON_L = 0x06;
 
@@ -53,15 +52,10 @@ static void initOnce() {
     if (g_inited) return;
     g_inited = true;
     
-    // 2. 关键修复：设置 MODE2 为 0x04 (OUTDRV=1, Totem Pole 推挽输出)
-    // 这样引脚才能强力输出高电平，驱动 HR8833
     i2cWriteReg(MODE2, 0x04); 
 
-    // 3. 设置 MODE1 (开启自增)
     i2cWriteReg(MODE1, 0x20 | 0x01); 
 
-    // 4. 设置频率 50Hz
-    // 25MHz / 4096 / 50Hz - 1 = ~121
     float prescaleval = 25000000.0f / 4096.0f / 50.0f - 1.0f;
     uint8_t prescale = (uint8_t)(prescaleval + 0.5f);
     
@@ -74,11 +68,10 @@ static void initOnce() {
     fiber_sleep(5);
     i2cWriteReg(MODE1, oldmode | 0xA1); // Auto-increment on, restart
 
-    // 5. 初始化所有通道为0
+
     for (int ch = 0; ch < 16; ch++) pca9685_setDuty((uint8_t)ch, 0);
 }
 
-// ===================== 电机控制 =====================
 // M1: PWM0, PWM1
 // M2: PWM3, PWM2
 // M3: PWM4, PWM5
@@ -111,9 +104,6 @@ static void motor_run(int motorId, int speed) {
     }
 }
 
-// ===================== 编码器 (双路) =====================
-// (这部分代码保持你原来的，或者上面给出的版本，此处省略以节省篇幅，功能不受影响)
-// ... 编码器代码粘贴在这里 ...
 static const int8_t QDEC_TABLE[16] = {0, 1, -1, 0, -1, 0, 0, 1, 1, 0, 0, -1, 0, -1, 1, 0};
 struct QDec { MicroBitPin *A; MicroBitPin *B; volatile int32_t count; uint8_t prev; };
 static QDec encLeft;
