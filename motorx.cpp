@@ -97,8 +97,8 @@ static void motor_run(int motorId, int speed) {
     switch(motorId) {
         case 1: chA = 0; chB = 1; break; // M1
         case 2: chA = 3; chB = 2; break; // M2
-        case 3: chA = 4; chB = 5; break; // M3
-        case 4: chA = 7; chB = 6; break; // M4
+        case 3: chA = 5; chB = 4; break; // M3
+        case 4: chA = 6; chB = 7; break; // M4
         default: return; 
     }
 
@@ -151,3 +151,4 @@ int encCountLeftNative() { encInitOnce(); return (int)encLeft.count; }
 //% shim=motorx::encCountRightNative
 int encCountRightNative() { encInitOnce(); return (int)encRight.count; }
 }
+
