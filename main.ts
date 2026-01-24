@@ -108,13 +108,13 @@ namespace motorx {
     export function mecanumMove(dir: MoveDir, speed: number): void {
         let s = speed;
         switch (dir) {
-            case MoveDir.Back:
-                setAll(s, s, s, s); break;
-            case MoveDir.Forward:
-                setAll(-s, -s, -s, -s); break;
             case MoveDir.Right:
-                setAll(-s, s, s, -s); break;
+                setAll(s, s, s, s); break;
             case MoveDir.Left:
+                setAll(-s, -s, -s, -s); break;
+            case MoveDir.Back:
+                setAll(-s, s, s, -s); break;
+            case MoveDir.Forward:
                 setAll(s, -s, -s, s); break;
             case MoveDir.LeftFront:
                 setAll(0, s, s, 0); break;
