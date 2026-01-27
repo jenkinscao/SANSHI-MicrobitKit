@@ -48,7 +48,7 @@ enum MoveDir {
     RightBack
 }
 
-//% color=#FF7A00 icon="\uf1b9" block="机器人控制V0.33"
+//% color=#FF7A00 icon="\uf1b9" block="机器人控制V0.34"
 namespace motorx {
 
     let lineLogic = 1; 
@@ -239,7 +239,7 @@ namespace motorx {
     export function setServoSpeed(pin: number, speed: number): void {
         // 映射速度 -100~100 到脉宽 1300~1700us
         // 0 -> 1500us (停止)
-        let us = 1500 + (speed * 2);
+        let us = 1500 + (speed * 5);
         setServoPulseNative(pin, us);
     }
 
@@ -286,4 +286,5 @@ namespace motorx {
     function setServoPulseNative(id: number, us: number): void {
         console.log(`Sim: Servo S${id} -> Pulse ${us}us`);
     }
+
 }
