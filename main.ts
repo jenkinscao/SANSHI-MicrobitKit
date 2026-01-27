@@ -1,4 +1,4 @@
- enum MotorList {
+enum MotorList {
     //% block="M1 前左"
     M1 = 1,
     //% block="M2 前右"
@@ -48,7 +48,7 @@ enum MoveDir {
     RightBack
 }
 
-//% color=#FF7A00 icon="\uf1b9" block="机器人控制V0.31"
+//% color=#FF7A00 icon="\uf1b9" block="机器人控制V0.33"
 namespace motorx {
 
     let lineLogic = 1; 
@@ -60,7 +60,7 @@ namespace motorx {
     }
 
     // ===========================
-    //    通用控制 (适用于 2轮 & 4轮)
+    //    电机控制
     // ===========================
 
     /**
@@ -68,7 +68,7 @@ namespace motorx {
      */
     //% block="设置 %motor 速度 %speed"
     //% speed.min=-100 speed.max=100
-    //% group="通用"
+    //% group="电机控制"
     //% weight=90
     export function setSpeed(motor: MotorList, speed: number): void {
         if (motor === MotorList.All) {
@@ -82,7 +82,7 @@ namespace motorx {
     }
 
     //% block="停止 %motor"
-    //% group="通用"
+    //% group="电机控制"
     //% weight=85
     export function stop(motor: MotorList): void {
         if (motor === MotorList.All) stopNative();
@@ -93,14 +93,6 @@ namespace motorx {
     //    四轮麦克纳姆轮 (Mecanum)
     // ===========================
 
-    /**
-     * 麦克纳姆轮移动控制
-     * 矢量原理：
-     * 前进: + + + +
-     * 后退: - - - -
-     * 左移: - + + - (M1反, M2正, M3正, M4反)
-     * 右移: + - - + (M1正, M2反, M3反, M4正)
-     */
     //% block="麦轮移动 方向 %dir 速度 %speed"
     //% speed.min=0 speed.max=100 speed.def=80
     //% group="四轮麦克纳姆"
@@ -149,24 +141,19 @@ namespace motorx {
     }
 
     // ===========================
-    //    两轮差速 (Legacy Support)
+    //    巡线 (Legacy Support)
     // ===========================
 
-    /**
-     * 强力巡线模式 (仅用于两轮车，使用 M1 和 M2)
-     */
     //% block="强力巡线 (2轮) 满速 %speed"
     //% speed.min=0 speed.max=100 speed.def=100
     //% group="两轮差速"
     //% weight=60
     export function trackLineStrong(speed: number): void {
-        // 读取传感器
         let s4 = (pins.digitalReadPin(DigitalPin.P12) == lineLogic) ? 1 : 0; 
         let s3 = (pins.digitalReadPin(DigitalPin.P13) == lineLogic) ? 1 : 0; 
         let s1 = (pins.digitalReadPin(DigitalPin.P14) == lineLogic) ? 1 : 0; 
         let s2 = (pins.digitalReadPin(DigitalPin.P15) == lineLogic) ? 1 : 0; 
 
-        // 仅控制 M1 和 M2
         if ((s2 == 1 && s3 == 1) || (s1 == 0 && s2 == 1 && s3 == 0 && s4 == 0) || (s1 == 0 && s2 == 0 && s3 == 1 && s4 == 0)) {
             setMotorSpeedNative(1, speed); setMotorSpeedNative(2, speed);
         } else if (s3 == 0 && s2 == 1) {
@@ -216,21 +203,65 @@ namespace motorx {
     //% group="编码器"
     //% weight=39
     export function encoderCount(motor: MotorList): number {
-        // 目前底层只实现了两路编码器
         if (motor === MotorList.M1) return encCountLeftNative();
         if (motor === MotorList.M2) return encCountRightNative();
         return 0;
     }
 
     // ===========================
-    //    SHIMS (模拟器兼容)
+    //    💥 新增: 舵机控制 💥
+    // ===========================
+
+    /**
+     * 设置180度标准舵机角度
+     * @param pin 舵机通道 (0-15), 例如: 8
+     * @param angle 角度 (0-180), 例如: 90
+     */
+    //% block="设置 180°舵机 S%pin 角度为 %angle"
+    //% pin.min=0 pin.max=15
+    //% angle.min=0 angle.max=180
+    //% group="舵机控制"
+    //% weight=30
+    export function setServoAngle(pin: number, angle: number): void {
+        setServoAngleNative(pin, angle);
+    }
+
+    /**
+     * 设置360度连续旋转舵机速度
+     * @param pin 舵机通道 (0-15), 例如: 8
+     * @param speed 速度 (-100 到 100), 0为停止
+     */
+    //% block="设置 360°舵机 S%pin 速度 %speed\\%"
+    //% pin.min=0 pin.max=15
+    //% speed.min=-100 speed.max=100
+    //% group="舵机控制"
+    //% weight=29
+    export function setServoSpeed(pin: number, speed: number): void {
+        // 映射速度 -100~100 到脉宽 1300~1700us
+        // 0 -> 1500us (停止)
+        let us = 1500 + (speed * 2);
+        setServoPulseNative(pin, us);
+    }
+
+    /**
+     * 关闭舵机 (释放扭矩，不再耗电)
+     */
+    //% block="关闭舵机 S%pin (释放)"
+    //% pin.min=0 pin.max=15
+    //% group="舵机控制"
+    //% weight=28
+    export function stopServo(pin: number): void {
+        setServoPulseNative(pin, 0);
+    }
+
+    // ===========================
+    //    SHIMS (底层接口)
     // ===========================
     //% shim=motorx::initNative
     function initNative(): void { console.log("Sim: Init PCA9685"); }
     
     //% shim=motorx::setMotorSpeedNative
     function setMotorSpeedNative(id: number, speed: number): void { 
-        // 模拟器Log优化，只显示变化的电机
         console.log(`Sim: Motor M${id} -> Speed ${speed}`); 
     }
     
@@ -245,4 +276,14 @@ namespace motorx {
     
     //% shim=motorx::encCountRightNative
     function encCountRightNative(): number { return 0; }
+
+    //% shim=motorx::setServoAngleNative
+    function setServoAngleNative(id: number, angle: number): void {
+        console.log(`Sim: Servo S${id} -> Angle ${angle}`);
+    }
+
+    //% shim=motorx::setServoPulseNative
+    function setServoPulseNative(id: number, us: number): void {
+        console.log(`Sim: Servo S${id} -> Pulse ${us}us`);
+    }
 }

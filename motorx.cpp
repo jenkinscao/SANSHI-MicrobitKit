@@ -48,28 +48,24 @@ static void pca9685_setDuty(uint8_t ch, uint16_t duty4095) {
     else pca9685_setPWM(ch, 0, duty4095);
 }
 
+// 初始化 PCA9685 (设置频率为 50Hz，适合舵机)
 static void initOnce() {
     if (g_inited) return;
     g_inited = true;
+
+    i2cWriteReg(MODE1, 0x00); // Reset
     
-    i2cWriteReg(MODE2, 0x04); 
-
-    i2cWriteReg(MODE1, 0x20 | 0x01); 
-
-    float prescaleval = 25000000.0f / 4096.0f / 50.0f - 1.0f;
-    uint8_t prescale = (uint8_t)(prescaleval + 0.5f);
+    // 设置频率 50Hz (用于舵机)
+    // 25MHz / 4096 / 50Hz - 1 = 121
+    uint8_t prescale = 121; 
     
     uint8_t oldmode = i2cReadReg(MODE1);
-    uint8_t newmode = (oldmode & 0x7F) | 0x10; // Sleep mode to set prescale
+    uint8_t newmode = (oldmode & 0x7F) | 0x10; // Sleep
     i2cWriteReg(MODE1, newmode);
     i2cWriteReg(PRESCALE, prescale);
     i2cWriteReg(MODE1, oldmode);
-    
     fiber_sleep(5);
-    i2cWriteReg(MODE1, oldmode | 0xA1); // Auto-increment on, restart
-
-
-    for (int ch = 0; ch < 16; ch++) pca9685_setDuty((uint8_t)ch, 0);
+    i2cWriteReg(MODE1, oldmode | 0xA1); // Auto-increment
 }
 
 // M1: PWM0, PWM1
@@ -103,6 +99,40 @@ static void motor_run(int motorId, int speed) {
         pca9685_setDuty(chA, 0); pca9685_setDuty(chB, 0);
     }
 }
+// === 💥 新增: 舵机控制函数 💥 ===
+// index: 0-15 (对应 PCA9685 的通道)
+// angle: 0-180 度
+static void servo_run(int index, int angle) {
+    initOnce();
+    if (index < 0 || index > 15) return;
+    
+    // 角度限制
+    if (angle < 0) angle = 0;
+    if (angle > 180) angle = 180;
+    
+    // 计算脉宽 (Pulse Width)
+    // 50Hz 周期 = 20ms = 20000us
+    // 0度 = 0.5ms = 500us
+    // 180度 = 2.5ms = 2500us
+    // map(angle, 0, 180, 500, 2500)
+    int us = 500 + (angle * 2000 / 180);
+    
+    // 转换为 0-4095 (12-bit)
+    // val = us * 4096 / 20000
+    //     = us * 4096 / 20000 = us * 0.2048
+    uint16_t val = (uint16_t)(us * 0.2048);
+    
+    pca9685_setPWM(index, 0, val);
+}
+
+// === 新增: 脉宽直接控制 (用于360舵机精细调速) ===
+// pulse_us: 500 - 2500
+static void servo_pulse(int index, int pulse_us) {
+    initOnce();
+    if (index < 0 || index > 15) return;
+    uint16_t val = (uint16_t)(pulse_us * 0.2048);
+    pca9685_setPWM(index, 0, val);
+}
 
 static const int8_t QDEC_TABLE[16] = {0, 1, -1, 0, -1, 0, 0, 1, 1, 0, 0, -1, 0, -1, 1, 0};
 struct QDec { MicroBitPin *A; MicroBitPin *B; volatile int32_t count; uint8_t prev; };
@@ -133,13 +163,17 @@ void initNative() { initOnce(); }
 //% shim=motorx::setMotorSpeedNative
 void setMotorSpeedNative(int id, int spd) { motor_run(id, spd); }
 //% shim=motorx::stopNative
-void stopNative() { initOnce(); for(int i=0; i<=7; i++) pca9685_setDuty(i, 0); }
+void stopNative() { initOnce(); for(int i=0; i<=16; i++) pca9685_setDuty(i, 0); }
 //% shim=motorx::encResetNative
 void encResetNative() { encInitOnce(); encLeft.count = 0; encRight.count = 0; }
 //% shim=motorx::encCountLeftNative
 int encCountLeftNative() { encInitOnce(); return (int)encLeft.count; }
 //% shim=motorx::encCountRightNative
 int encCountRightNative() { encInitOnce(); return (int)encRight.count; }
+//% shim=motorx::setServoAngleNative
+void setServoAngleNative(int id, int angle) { servo_run(id, angle); }
+//% shim=motorx::setServoPulseNative
+void setServoPulseNative(int id, int us) { servo_pulse(id, us); }
 }
 
 
