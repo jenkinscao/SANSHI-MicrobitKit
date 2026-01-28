@@ -57,7 +57,7 @@ static void initOnce() {
     
     // 设置频率 50Hz (用于舵机)
     // 25MHz / 4096 / 50Hz - 1 = 121
-    uint8_t prescale = 121; 
+    uint8_t prescale = 30; 
     
     uint8_t oldmode = i2cReadReg(MODE1);
     uint8_t newmode = (oldmode & 0x7F) | 0x10; // Sleep
@@ -175,5 +175,6 @@ void setServoAngleNative(int id, int angle) { servo_run(id, angle); }
 //% shim=motorx::setServoPulseNative
 void setServoPulseNative(int id, int us) { servo_pulse(id, us); }
 }
+
 
 
