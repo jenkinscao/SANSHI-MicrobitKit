@@ -48,7 +48,7 @@ enum MoveDir {
     RightBack
 }
 
-//% color=#FF7A00 icon="\uf1b9" block="机器人控制V0.35"
+//% color=#FF7A00 icon="\uf1b9" block="机器人控制V0.36"
 namespace motorx {
 
     let lineLogic = 1; 
@@ -288,4 +288,5 @@ namespace motorx {
     }
 
 }
+
 
