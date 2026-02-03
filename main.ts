@@ -48,7 +48,7 @@ enum MoveDir {
     RightBack
 }
 
-//% color=#FF7A00 icon="\uf1b9" block="机器人控制V0.36"
+//% color=#FF7A00 icon="\uf1b9" block="机器人控制V0.37"
 namespace motorx {
 
     let lineLogic = 1; 
@@ -227,6 +227,20 @@ namespace motorx {
     }
 
     /**
+     * 设置180度私有舵机角度
+     * @param pin 私有舵机通道 (0-15), 例如: 8
+     * @param angle 角度 (0-180), 例如: 90
+     */
+    //% block="设置 180°私有舵机 S%pin 角度为 %angle"
+    //% pin.min=0 pin.max=15
+    //% angle.min=0 angle.max=180
+    //% group="舵机控制"
+    //% weight=30
+    export function setCustomServoAngle(pin: number, angle: number): void {
+        setCustomServoAngleNative(pin, angle); 
+    }
+
+    /**
      * 设置360度连续旋转舵机速度
      * @param pin 舵机通道 (0-15), 例如: 8
      * @param speed 速度 (-100 到 100), 0为停止
@@ -286,7 +300,12 @@ namespace motorx {
     function setServoPulseNative(id: number, us: number): void {
         console.log(`Sim: Servo S${id} -> Pulse ${us}us`);
     }
+    //% shim=motorx::setCustomServoAngleNative
+    function setCustomServoAngleNative(id: number, angle: number): void {
+        console.log(`Sim: Custom Servo S${id} -> Angle ${angle}`);
+    }
 
 }
+
 
 
