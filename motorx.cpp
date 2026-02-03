@@ -78,12 +78,6 @@ namespace motorx
         i2cWriteReg(MODE1, oldmode);
         fiber_sleep(5);
         i2cWriteReg(MODE1, oldmode | 0xA1); // Auto-increment
-
-        // 在初始化时将所有通道设为 1.5ms (1500us)
-        for (int i = 0; i < 16; i++)
-        {
-            setServoPulseNative(i, 1500);
-        }
     }
 
     // M1: PWM0, PWM1
@@ -297,4 +291,5 @@ namespace motorx
     void setCustomServoAngleNative(int id, int angle) { servo_run_custom(id, angle); }
     //% shim=motorx::setServoPulseNative
     void setServoPulseNative(int id, int us) { servo_pulse(id, us);}
+
 }
