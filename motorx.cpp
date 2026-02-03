@@ -66,6 +66,11 @@ static void initOnce() {
     i2cWriteReg(MODE1, oldmode);
     fiber_sleep(5);
     i2cWriteReg(MODE1, oldmode | 0xA1); // Auto-increment
+
+    // 在初始化时将所有通道设为 1.5ms (1500us)
+    for (int i = 0; i < 16; i++) {
+        setServoPulseNative(i, 1500); 
+    }
 }
 
 // M1: PWM0, PWM1
@@ -125,6 +130,22 @@ static void servo_run(int index, int angle) {
     pca9685_setPWM(index, 0, val);
 }
 
+static void servo_run_custom(int index, int angle) {
+    initOnce();
+    if (index < 0 || index > 15) return;
+    if (angle < 0) angle = 0;
+    if (angle > 180) angle = 180;
+    
+    // 重新映射：0度=1000us, 180度=2000us
+    // 中位 90度时：1000 + 90 * (1000/180) = 1500us
+    int us = 1000 + (angle * 1000 / 180);
+    
+    // 转换为 PCA9685 的 12-bit 数值
+    uint16_t val = (uint16_t)(us * 0.2048);
+    pca9685_setPWM(index, 0, val);
+}
+
+
 // === 新增: 脉宽直接控制 (用于360舵机精细调速) ===
 // pulse_us: 500 - 2500
 static void servo_pulse(int index, int pulse_us) {
@@ -172,9 +193,12 @@ int encCountLeftNative() { encInitOnce(); return (int)encLeft.count; }
 int encCountRightNative() { encInitOnce(); return (int)encRight.count; }
 //% shim=motorx::setServoAngleNative
 void setServoAngleNative(int id, int angle) { servo_run(id, angle); }
+//% shim=motorx::setCustomServoAngleNative
+void setCustomServoAngleNative(int id, int angle) { servo_run_custom(id, angle); }
 //% shim=motorx::setServoPulseNative
 void setServoPulseNative(int id, int us) { servo_pulse(id, us); }
 }
+
 
 
 
