@@ -56,7 +56,8 @@ namespace motorx {
     let lineLogic = 1; 
     
     // === ⚡ 变量：记录上一次的运动状态，用于防反向冲击 ===
-    let lastMoveState = -1; 
+    // 明确初始化为 Stop 状态
+    let lastMoveState = MoveDir.Stop; 
 
     //% block="初始化 驱动板"
     //% weight=100
@@ -79,10 +80,7 @@ namespace motorx {
     //% weight=90
     export function setSpeed(motor: MotorList, speed: number): void {
         if (motor === MotorList.All) {
-            setMotorSpeedNative(1, speed);
-            setMotorSpeedNative(2, speed);
-            setMotorSpeedNative(3, speed);
-            setMotorSpeedNative(4, speed);
+            setAll(speed, speed, speed, speed);
         } else {
             setMotorSpeedNative(motor, speed);
         }
@@ -110,17 +108,16 @@ namespace motorx {
     export function mecanumMove(dir: MoveDir, speed: number): void {
         // === ⚡ 核心修改：防重启保护逻辑 ⚡ ===
         // 如果当前方向 与 上次方向 不同，且上次不是停止状态
-        if (dir != lastMoveState) {
+        if (dir != lastMoveState && lastMoveState != MoveDir.Stop) {
             // 1. 先强制停止所有电机，切断大电流
             stopNative();
             
             // 2. 延时 100ms (死区时间)，等待反向电动势消失，电压回升
-            // 注意：TT马达通常需要 50ms-100ms，大功率电机可能需要 200ms
             basic.pause(100); 
-
-            // 3. 更新状态记录
-            lastMoveState = dir;
         }
+        
+        // 3. 无论是否延时，都要更新状态
+        lastMoveState = dir;
         // ========================================
 
         let s = speed;
@@ -141,6 +138,8 @@ namespace motorx {
                 setAll(-s, 0, 0, -s); break;
             case MoveDir.RightBack:
                 setAll(0, -s, -s, 0); break;
+            case MoveDir.Stop:
+                stopNative(); break;
         }
     }
 
@@ -155,11 +154,11 @@ namespace motorx {
         // 旋转状态我们用特殊ID标记，例如 100(左) 和 101(右)
         let spinState = left ? 100 : 101;
         
-        if (spinState != lastMoveState) {
+        if (spinState != lastMoveState && lastMoveState != MoveDir.Stop) {
             stopNative();
             basic.pause(100); 
-            lastMoveState = spinState;
         }
+        lastMoveState = spinState;
         // ============================
 
         if (left) {
@@ -177,10 +176,10 @@ namespace motorx {
     }
 
     // ===========================
-    //    巡线 (Legacy Support)
+    //    巡线 (优化版)
     // ===========================
 
-    //% block="强力巡线 (2轮) 满速 %speed"
+    //% block="强力巡线 (4驱) 满速 %speed"
     //% speed.min=0 speed.max=100 speed.def=100
     //% group="两轮差速"
     //% weight=60
@@ -190,19 +189,42 @@ namespace motorx {
         let s1 = (pins.digitalReadPin(DigitalPin.P14) == lineLogic) ? 1 : 0; 
         let s2 = (pins.digitalReadPin(DigitalPin.P15) == lineLogic) ? 1 : 0; 
 
+        // 💡 修正：同时控制前后轮，防止后轮拖拽
+        // 左侧电机组: M1(前左) + M3(后左)
+        // 右侧电机组: M2(前右) + M4(后右)
+        
+        // 1. 全黑或全白 -> 直行
         if ((s2 == 1 && s3 == 1) || (s1 == 0 && s2 == 1 && s3 == 0 && s4 == 0) || (s1 == 0 && s2 == 0 && s3 == 1 && s4 == 0)) {
-            setMotorSpeedNative(1, speed); setMotorSpeedNative(2, speed);
-        } else if (s3 == 0 && s2 == 1) {
-            setMotorSpeedNative(1, 20); setMotorSpeedNative(2, speed);
-        } else if (s1 == 1) {
-            setMotorSpeedNative(1, -40); setMotorSpeedNative(2, speed);
-        } else if (s3 == 1 && s4 == 0) {
-            setMotorSpeedNative(1, speed); setMotorSpeedNative(2, 20);
-        } else if (s4 == 1) {
-            setMotorSpeedNative(1, speed); setMotorSpeedNative(2, -40);
-        } else {
-            setMotorSpeedNative(1, speed); setMotorSpeedNative(2, speed);
+            setGroupSpeed(speed, speed); 
+        } 
+        // 2. 偏左 -> 左轮减速，右轮满速
+        else if (s3 == 0 && s2 == 1) {
+            setGroupSpeed(20, speed);
+        } 
+        // 3. 极左 -> 左轮反转，右轮满速
+        else if (s1 == 1) {
+            setGroupSpeed(-40, speed);
+        } 
+        // 4. 偏右 -> 左轮满速，右轮减速
+        else if (s3 == 1 && s4 == 0) {
+            setGroupSpeed(speed, 20);
+        } 
+        // 5. 极右 -> 左轮满速，右轮反转
+        else if (s4 == 1) {
+            setGroupSpeed(speed, -40);
+        } 
+        // 默认直行
+        else {
+            setGroupSpeed(speed, speed);
         }
+    }
+
+    // 辅助函数：同时设置左侧(M1,M3)和右侧(M2,M4)的速度
+    function setGroupSpeed(leftSpeed: number, rightSpeed: number) {
+        setMotorSpeedNative(1, leftSpeed); // M1
+        setMotorSpeedNative(3, leftSpeed); // M3
+        setMotorSpeedNative(2, rightSpeed); // M2
+        setMotorSpeedNative(4, rightSpeed); // M4
     }
 
     //% block="设置巡线模式为 %color"
@@ -287,7 +309,7 @@ namespace motorx {
     //% group="舵机控制"
     //% weight=29
     export function setServoSpeed(pin: number, speed: number): void {
-        // 映射速度 -100~100 到脉宽 1300~1700us
+        // 映射速度 -100~100 到脉宽 1000~2000us
         // 0 -> 1500us (停止)
         let us = 1500 + (speed * 5);
         setServoPulseNative(pin, us);
