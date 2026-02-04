@@ -45,18 +45,25 @@ enum MoveDir {
     //% block="左下"
     LeftBack,
     //% block="右下"
-    RightBack
+    RightBack,
+    //% block="停止"
+    Stop = 99
 }
 
 //% color=#FF7A00 icon="\uf1b9" block="机器人控制V0.3.9"
 namespace motorx {
 
     let lineLogic = 1; 
+    
+    // === ⚡ 变量：记录上一次的运动状态，用于防反向冲击 ===
+    let lastMoveState = -1; 
 
     //% block="初始化 驱动板"
     //% weight=100
     export function init(): void {
         initNative();
+        // 初始化时先停止一次
+        stopNative();
     }
 
     // ===========================
@@ -85,7 +92,10 @@ namespace motorx {
     //% group="电机控制"
     //% weight=85
     export function stop(motor: MotorList): void {
-        if (motor === MotorList.All) stopNative();
+        if (motor === MotorList.All) {
+            stopNative();
+            lastMoveState = MoveDir.Stop; // 更新状态为停止
+        }
         else setMotorSpeedNative(motor, 0);
     }
 
@@ -98,6 +108,21 @@ namespace motorx {
     //% group="四轮麦克纳姆"
     //% weight=80
     export function mecanumMove(dir: MoveDir, speed: number): void {
+        // === ⚡ 核心修改：防重启保护逻辑 ⚡ ===
+        // 如果当前方向 与 上次方向 不同，且上次不是停止状态
+        if (dir != lastMoveState) {
+            // 1. 先强制停止所有电机，切断大电流
+            stopNative();
+            
+            // 2. 延时 100ms (死区时间)，等待反向电动势消失，电压回升
+            // 注意：TT马达通常需要 50ms-100ms，大功率电机可能需要 200ms
+            basic.pause(100); 
+
+            // 3. 更新状态记录
+            lastMoveState = dir;
+        }
+        // ========================================
+
         let s = speed;
         switch (dir) {
             case MoveDir.Forward:
@@ -126,6 +151,17 @@ namespace motorx {
     //% group="四轮麦克纳姆"
     //% weight=79
     export function mecanumSpin(left: boolean, speed: number): void {
+        // === ⚡ 旋转同样加防冲击保护 ===
+        // 旋转状态我们用特殊ID标记，例如 100(左) 和 101(右)
+        let spinState = left ? 100 : 101;
+        
+        if (spinState != lastMoveState) {
+            stopNative();
+            basic.pause(100); 
+            lastMoveState = spinState;
+        }
+        // ============================
+
         if (left) {
             setAll(speed, speed, -speed, -speed);
         } else {
@@ -306,8 +342,3 @@ namespace motorx {
     }
 
 }
-
-
-
-
-
