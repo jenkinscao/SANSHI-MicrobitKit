@@ -50,7 +50,7 @@ enum MoveDir {
     Stop = 99
 }
 
-//% color=#FF7A00 icon="\uf1b9" block="机器人控制V0.3.9"
+//% color=#FF7A00 icon="\uf1b9" block="机器人控制V0.3.10"
 namespace motorx {
 
     let lineLogic = 1; 
@@ -362,5 +362,6 @@ namespace motorx {
     function setCustomServoAngleNative(id: number, angle: number): void {
         console.log(`Sim: Custom Servo S${id} -> Angle ${angle}`);
     }
+
 
 }
