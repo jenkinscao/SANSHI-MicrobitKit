@@ -1,3 +1,7 @@
+// ===========================
+//       枚举定义 (通用)
+// ===========================
+
 enum MotorList {
     //% block="M1 前左"
     M1 = 1,
@@ -50,14 +54,12 @@ enum MoveDir {
     Stop = 99
 }
 
-//% color=#FF7A00 icon="\uf1b9" block="机器人控制V0.3.10"
-namespace motorx {
+// =================================================================
+// 📦 命名空间 1: 基础硬件控制 (初始化/舵机/单电机/编码器)
+// =================================================================
 
-    let lineLogic = 1; 
-    
-    // === ⚡ 变量：记录上一次的运动状态，用于防反向冲击 ===
-    // 明确初始化为 Stop 状态
-    let lastMoveState = MoveDir.Stop; 
+//% color=#FF7A00 icon="\uf1b9" block="机器人底座"
+namespace motorx {
 
     //% block="初始化 驱动板"
     //% weight=100
@@ -68,7 +70,7 @@ namespace motorx {
     }
 
     // ===========================
-    //    电机控制
+    //    电机基础控制
     // ===========================
 
     /**
@@ -76,176 +78,35 @@ namespace motorx {
      */
     //% block="设置 %motor 速度 %speed"
     //% speed.min=-100 speed.max=100
-    //% group="电机控制"
     //% weight=90
     export function setSpeed(motor: MotorList, speed: number): void {
         if (motor === MotorList.All) {
-            setAll(speed, speed, speed, speed);
+            setMotorSpeedNative(1, speed);
+            setMotorSpeedNative(2, speed);
+            setMotorSpeedNative(3, speed);
+            setMotorSpeedNative(4, speed);
         } else {
             setMotorSpeedNative(motor, speed);
         }
     }
 
     //% block="停止 %motor"
-    //% group="电机控制"
     //% weight=85
     export function stop(motor: MotorList): void {
         if (motor === MotorList.All) {
             stopNative();
-            lastMoveState = MoveDir.Stop; // 更新状态为停止
+            // 通知麦轮模块重置状态(如果需要，但这层解耦了，由麦轮模块自己管理)
         }
         else setMotorSpeedNative(motor, 0);
     }
 
-    // ===========================
-    //    四轮麦克纳姆轮 (Mecanum)
-    // ===========================
-
-    //% block="麦轮移动 方向 %dir 速度 %speed"
-    //% speed.min=0 speed.max=100 speed.def=80
-    //% group="四轮麦克纳姆"
-    //% weight=80
-    export function mecanumMove(dir: MoveDir, speed: number): void {
-        // === ⚡ 核心修改：防重启保护逻辑 ⚡ ===
-        // 如果当前方向 与 上次方向 不同，且上次不是停止状态
-        if (dir != lastMoveState && lastMoveState != MoveDir.Stop) {
-            // 1. 先强制停止所有电机，切断大电流
-            stopNative();
-            
-            // 2. 延时 100ms (死区时间)，等待反向电动势消失，电压回升
-            basic.pause(100); 
-        }
-        
-        // 3. 无论是否延时，都要更新状态
-        lastMoveState = dir;
-        // ========================================
-
-        let s = speed;
-        switch (dir) {
-            case MoveDir.Forward:
-                setAll(s, s, s, s); break;
-            case MoveDir.Back:
-                setAll(-s, -s, -s, -s); break;
-            case MoveDir.Left:
-                setAll(-s, s, s, -s); break;
-            case MoveDir.Right:
-                setAll(s, -s, -s, s); break;
-            case MoveDir.LeftFront:
-                setAll(0, s, s, 0); break;
-            case MoveDir.RightFront:
-                setAll(s, 0, 0, s); break;
-            case MoveDir.LeftBack:
-                setAll(-s, 0, 0, -s); break;
-            case MoveDir.RightBack:
-                setAll(0, -s, -s, 0); break;
-            case MoveDir.Stop:
-                stopNative(); break;
-        }
+    // 供其他命名空间调用的内部导出函数
+    export function _internalSetMotor(id: number, speed: number) {
+        setMotorSpeedNative(id, speed);
     }
-
-    //% block="麦轮原地旋转 %dir 速度 %speed"
-    //% dir.shadow="toggleOnOff" dir.defl=true
-    //% dir.on="向左" dir.off="向右"
-    //% speed.min=0 speed.max=100 speed.def=80
-    //% group="四轮麦克纳姆"
-    //% weight=79
-    export function mecanumSpin(left: boolean, speed: number): void {
-        // === ⚡ 旋转同样加防冲击保护 ===
-        // 旋转状态我们用特殊ID标记，例如 100(左) 和 101(右)
-        let spinState = left ? 100 : 101;
-        
-        if (spinState != lastMoveState && lastMoveState != MoveDir.Stop) {
-            stopNative();
-            basic.pause(100); 
-        }
-        lastMoveState = spinState;
-        // ============================
-
-        if (left) {
-            setAll(speed, speed, -speed, -speed);
-        } else {
-            setAll(-speed, -speed, speed, speed);
-        }
-    }
-
-    function setAll(m1: number, m2: number, m3: number, m4: number) {
-        setMotorSpeedNative(1, m1);
-        setMotorSpeedNative(2, m2);
-        setMotorSpeedNative(3, m3);
-        setMotorSpeedNative(4, m4);
-    }
-
-    // ===========================
-    //    巡线 (优化版)
-    // ===========================
-
-    //% block="强力巡线 (4驱) 满速 %speed"
-    //% speed.min=0 speed.max=100 speed.def=100
-    //% group="两轮差速"
-    //% weight=60
-    export function trackLineStrong(speed: number): void {
-        let s4 = (pins.digitalReadPin(DigitalPin.P12) == lineLogic) ? 1 : 0; 
-        let s3 = (pins.digitalReadPin(DigitalPin.P13) == lineLogic) ? 1 : 0; 
-        let s1 = (pins.digitalReadPin(DigitalPin.P14) == lineLogic) ? 1 : 0; 
-        let s2 = (pins.digitalReadPin(DigitalPin.P15) == lineLogic) ? 1 : 0; 
-
-        // 💡 修正：同时控制前后轮，防止后轮拖拽
-        // 左侧电机组: M1(前左) + M3(后左)
-        // 右侧电机组: M2(前右) + M4(后右)
-        
-        // 1. 全黑或全白 -> 直行
-        if ((s2 == 1 && s3 == 1) || (s1 == 0 && s2 == 1 && s3 == 0 && s4 == 0) || (s1 == 0 && s2 == 0 && s3 == 1 && s4 == 0)) {
-            setGroupSpeed(speed, speed); 
-        } 
-        // 2. 偏左 -> 左轮减速，右轮满速
-        else if (s3 == 0 && s2 == 1) {
-            setGroupSpeed(20, speed);
-        } 
-        // 3. 极左 -> 左轮反转，右轮满速
-        else if (s1 == 1) {
-            setGroupSpeed(-40, speed);
-        } 
-        // 4. 偏右 -> 左轮满速，右轮减速
-        else if (s3 == 1 && s4 == 0) {
-            setGroupSpeed(speed, 20);
-        } 
-        // 5. 极右 -> 左轮满速，右轮反转
-        else if (s4 == 1) {
-            setGroupSpeed(speed, -40);
-        } 
-        // 默认直行
-        else {
-            setGroupSpeed(speed, speed);
-        }
-    }
-
-    // 辅助函数：同时设置左侧(M1,M3)和右侧(M2,M4)的速度
-    function setGroupSpeed(leftSpeed: number, rightSpeed: number) {
-        setMotorSpeedNative(1, leftSpeed); // M1
-        setMotorSpeedNative(3, leftSpeed); // M3
-        setMotorSpeedNative(2, rightSpeed); // M2
-        setMotorSpeedNative(4, rightSpeed); // M4
-    }
-
-    //% block="设置巡线模式为 %color"
-    //% group="两轮差速"
-    //% weight=59
-    export function setLineColor(color: LineColor): void {
-        lineLogic = color;
-    }
-
-    //% block="传感器 %sensor 在线上"
-    //% group="两轮差速"
-    //% weight=58
-    export function isLineDetected(sensor: LineSensor): boolean {
-        return pins.digitalReadPin(sensor) === lineLogic;
-    }
-
-    //% block="读取 传感器 %sensor 原始值"
-    //% group="两轮差速"
-    //% weight=57
-    export function getSensorValue(sensor: LineSensor): number {
-        return pins.digitalReadPin(sensor);
+    
+    export function _internalStop() {
+        stopNative();
     }
 
     // ===========================
@@ -267,13 +128,11 @@ namespace motorx {
     }
 
     // ===========================
-    //    💥 新增: 舵机控制 💥
+    //    舵机控制
     // ===========================
 
     /**
      * 设置180度标准舵机角度
-     * @param pin 舵机通道 (0-15), 例如: 8
-     * @param angle 角度 (0-180), 例如: 90
      */
     //% block="设置 180°舵机 S%pin 角度为 %angle"
     //% pin.min=0 pin.max=15
@@ -286,8 +145,6 @@ namespace motorx {
 
     /**
      * 设置180度私有舵机角度
-     * @param pin 私有舵机通道 (0-15), 例如: 8
-     * @param angle 角度 (0-180), 例如: 90
      */
     //% block="设置 180°私有舵机 S%pin 角度为 %angle"
     //% pin.min=0 pin.max=15
@@ -300,8 +157,6 @@ namespace motorx {
 
     /**
      * 设置360度连续旋转舵机速度
-     * @param pin 舵机通道 (0-15), 例如: 8
-     * @param speed 速度 (-100 到 100), 0为停止
      */
     //% block="设置 360°舵机 S%pin 速度 %speed\\%"
     //% pin.min=0 pin.max=15
@@ -310,13 +165,12 @@ namespace motorx {
     //% weight=29
     export function setServoSpeed(pin: number, speed: number): void {
         // 映射速度 -100~100 到脉宽 1000~2000us
-        // 0 -> 1500us (停止)
         let us = 1500 + (speed * 5);
         setServoPulseNative(pin, us);
     }
 
     /**
-     * 关闭舵机 (释放扭矩，不再耗电)
+     * 关闭舵机
      */
     //% block="关闭舵机 S%pin (释放)"
     //% pin.min=0 pin.max=15
@@ -328,7 +182,9 @@ namespace motorx {
 
     // ===========================
     //    SHIMS (底层接口)
+    //    必须保留在 motorx 命名空间下以匹配 C++ 定义
     // ===========================
+    
     //% shim=motorx::initNative
     function initNative(): void { console.log("Sim: Init PCA9685"); }
     
@@ -362,6 +218,154 @@ namespace motorx {
     function setCustomServoAngleNative(id: number, angle: number): void {
         console.log(`Sim: Custom Servo S${id} -> Angle ${angle}`);
     }
+}
 
+// =================================================================
+// 🎮 命名空间 2: 麦克纳姆轮控制 (四轮全向)
+// =================================================================
 
+//% color=#0078D7 icon="\uf047" block="麦轮车"
+namespace mecanumRobot {
+    
+    // 变量：记录上一次的运动状态，用于防反向冲击
+    let lastMoveState = MoveDir.Stop; 
+
+    //% block="麦轮移动 方向 %dir 速度 %speed"
+    //% speed.min=0 speed.max=100 speed.def=80
+    //% weight=80
+    export function mecanumMove(dir: MoveDir, speed: number): void {
+        // === ⚡ 核心修改：防重启保护逻辑 ⚡ ===
+        if (dir != lastMoveState && lastMoveState != MoveDir.Stop) {
+            motorx._internalStop();
+            basic.pause(100); 
+        }
+        
+        lastMoveState = dir;
+        // ========================================
+
+        let s = speed;
+        switch (dir) {
+            case MoveDir.Forward:
+                setAll(s, s, s, s); break;
+            case MoveDir.Back:
+                setAll(-s, -s, -s, -s); break;
+            case MoveDir.Left:
+                setAll(-s, s, s, -s); break;
+            case MoveDir.Right:
+                setAll(s, -s, -s, s); break;
+            case MoveDir.LeftFront:
+                setAll(0, s, s, 0); break;
+            case MoveDir.RightFront:
+                setAll(s, 0, 0, s); break;
+            case MoveDir.LeftBack:
+                setAll(-s, 0, 0, -s); break;
+            case MoveDir.RightBack:
+                setAll(0, -s, -s, 0); break;
+            case MoveDir.Stop:
+                motorx._internalStop(); break;
+        }
+    }
+
+    //% block="麦轮原地旋转 %dir 速度 %speed"
+    //% dir.shadow="toggleOnOff" dir.defl=true
+    //% dir.on="向左" dir.off="向右"
+    //% speed.min=0 speed.max=100 speed.def=80
+    //% weight=79
+    export function mecanumSpin(left: boolean, speed: number): void {
+        // 旋转状态特殊ID标记：100(左) 和 101(右)
+        let spinState = left ? 100 : 101;
+        
+        if (spinState != lastMoveState && lastMoveState != MoveDir.Stop) {
+            motorx._internalStop();
+            basic.pause(100); 
+        }
+        lastMoveState = spinState;
+
+        if (left) {
+            setAll(speed, speed, -speed, -speed);
+        } else {
+            setAll(-speed, -speed, speed, speed);
+        }
+    }
+
+    // 内部帮助函数
+    function setAll(m1: number, m2: number, m3: number, m4: number) {
+        motorx._internalSetMotor(1, m1);
+        motorx._internalSetMotor(2, m2);
+        motorx._internalSetMotor(3, m3);
+        motorx._internalSetMotor(4, m4);
+    }
+}
+
+// =================================================================
+// 🚜 命名空间 3: 差速/巡线控制 (双轮/四轮坦克模式)
+// =================================================================
+
+//% color=#E65100 icon="\uf018" block="巡线/坦克车"
+namespace diffRobot {
+
+    let lineLogic = 1; 
+
+    //% block="强力巡线 (4驱) 满速 %speed"
+    //% speed.min=0 speed.max=100 speed.def=100
+    //% weight=60
+    export function trackLineStrong(speed: number): void {
+        let s4 = (pins.digitalReadPin(DigitalPin.P12) == lineLogic) ? 1 : 0; 
+        let s3 = (pins.digitalReadPin(DigitalPin.P13) == lineLogic) ? 1 : 0; 
+        let s1 = (pins.digitalReadPin(DigitalPin.P14) == lineLogic) ? 1 : 0; 
+        let s2 = (pins.digitalReadPin(DigitalPin.P15) == lineLogic) ? 1 : 0; 
+
+        // 💡 逻辑：左侧(M1+M3) 右侧(M2+M4)
+        
+        // 1. 全黑或全白 -> 直行
+        if ((s2 == 1 && s3 == 1) || (s1 == 0 && s2 == 1 && s3 == 0 && s4 == 0) || (s1 == 0 && s2 == 0 && s3 == 1 && s4 == 0)) {
+            setGroupSpeed(speed, speed); 
+        } 
+        // 2. 偏左 -> 左轮减速，右轮满速
+        else if (s3 == 0 && s2 == 1) {
+            setGroupSpeed(20, speed);
+        } 
+        // 3. 极左 -> 左轮反转，右轮满速
+        else if (s1 == 1) {
+            setGroupSpeed(-40, speed);
+        } 
+        // 4. 偏右 -> 左轮满速，右轮减速
+        else if (s3 == 1 && s4 == 0) {
+            setGroupSpeed(speed, 20);
+        } 
+        // 5. 极右 -> 左轮满速，右轮反转
+        else if (s4 == 1) {
+            setGroupSpeed(speed, -40);
+        } 
+        // 默认直行
+        else {
+            setGroupSpeed(speed, speed);
+        }
+    }
+
+    // 辅助函数：同时设置左侧(M1,M3)和右侧(M2,M4)的速度
+    function setGroupSpeed(leftSpeed: number, rightSpeed: number) {
+        motorx._internalSetMotor(1, leftSpeed); // M1
+        motorx._internalSetMotor(3, leftSpeed); // M3
+        motorx._internalSetMotor(2, rightSpeed); // M2
+        motorx._internalSetMotor(4, rightSpeed); // M4
+    }
+
+    //% block="设置巡线模式为 %color"
+    //% weight=59
+    export function setLineColor(color: LineColor): void {
+        lineLogic = color;
+    }
+
+    //% block="传感器 %sensor 在线上"
+    //% weight=58
+    export function isLineDetected(sensor: LineSensor): boolean {
+        return pins.digitalReadPin(sensor) === lineLogic;
+    }
+
+    //% block="读取 传感器 %sensor 原始值"
+    //% weight=57
+    export function getSensorValue(sensor: LineSensor): number {
+        return pins.digitalReadPin(sensor);
+    }
 }
