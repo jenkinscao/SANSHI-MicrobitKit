@@ -108,8 +108,8 @@ namespace motorx
 
         switch (motorId) {
             case 1: chA = 0; chB = 1; break;
-            case 2: chA = 2; chB = 3; break;
-            case 3: chA = 4; chB = 5; break;
+            case 2: chA = 3; chB = 2; break;
+            case 3: chA = 5; chB = 4; break;
             case 4: chA = 6; chB = 7; break;
             default: return;
         }
@@ -204,5 +204,6 @@ namespace motorx
     void setServoPulseNative(int id, int us) { servo_pulse(id, us); }
 
 } // namespace motorx 结束
+
 
 // ⚠️ 文件末尾不能再有任何大括号了
