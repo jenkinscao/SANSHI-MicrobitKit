@@ -306,14 +306,14 @@ namespace diffRobot {
 
     let lineLogic = 1; 
 
-    //% block="超强力巡线 (4驱) 满速 %speed"
+    //% block="强力巡线 (4驱) 满速 %speed"
     //% speed.min=0 speed.max=100 speed.def=100
     //% weight=60
     export function trackLineStrong(speed: number): void {
-        let s4 = (pins.digitalReadPin(DigitalPin.P12) == lineLogic) ? 1 : 0; 
-        let s3 = (pins.digitalReadPin(DigitalPin.P13) == lineLogic) ? 1 : 0; 
-        let s1 = (pins.digitalReadPin(DigitalPin.P14) == lineLogic) ? 1 : 0; 
-        let s2 = (pins.digitalReadPin(DigitalPin.P15) == lineLogic) ? 1 : 0; 
+        let s4 = (pins.digitalReadPin(LineSensor.X4) == lineLogic) ? 1 : 0; 
+        let s3 = (pins.digitalReadPin(LineSensor.X3) == lineLogic) ? 1 : 0; 
+        let s1 = (pins.digitalReadPin(LineSensor.X1) == lineLogic) ? 1 : 0; 
+        let s2 = (pins.digitalReadPin(LineSensor.X2) == lineLogic) ? 1 : 0; 
 
         // 💡 逻辑：左侧(M1+M3) 右侧(M2+M4)
         
@@ -369,4 +369,3 @@ namespace diffRobot {
         return pins.digitalReadPin(sensor);
     }
 }
-
