@@ -179,14 +179,7 @@ namespace motorx {
     //% shim=motorx::stopNative
     function stopNative(): void { console.log("Sim: Stop All"); }
     
-    //% shim=motorx::encResetNative
-    function encResetNative(): void { console.log("Sim: Reset Enc"); }
-    
-    //% shim=motorx::encCountLeftNative
-    function encCountLeftNative(): number { return 0; }
-    
-    //% shim=motorx::encCountRightNative
-    function encCountRightNative(): number { return 0; }
+
 
     //% shim=motorx::setServoAngleNative
     function setServoAngleNative(id: number, angle: number): void {
@@ -369,5 +362,14 @@ namespace diffRobot {
         if (motor === MotorList.M2) return encCountRightNative();
         return 0;
     }
+
+        //% shim=motorx::encResetNative
+    function encResetNative(): void { console.log("Sim: Reset Enc"); }
+    
+    //% shim=motorx::encCountLeftNative
+    function encCountLeftNative(): number { return 0; }
+    
+    //% shim=motorx::encCountRightNative
+    function encCountRightNative(): number { return 0; }
 }
 
