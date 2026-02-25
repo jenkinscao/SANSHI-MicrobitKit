@@ -337,8 +337,8 @@ namespace diffRobot {
     }
 
     function setTwoGroupSpeed(leftSpeed: number, rightSpeed: number) {
-        motorx._internalSetMotor(1, leftSpeed); // M1
-        motorx._internalSetMotor(3, rightSpeed); // M2
+        motorx._internalSetMotor(1, -leftSpeed); // M1
+        motorx._internalSetMotor(3, -rightSpeed); // M3
     }
 
     //% block="设置巡线模式为 %color"
