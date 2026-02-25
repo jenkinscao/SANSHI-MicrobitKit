@@ -304,27 +304,27 @@ namespace diffRobot {
         
         // 1. 全黑或全白 -> 直行
         if ((s2 == 1 && s3 == 1) || (s1 == 0 && s2 == 1 && s3 == 0 && s4 == 0) || (s1 == 0 && s2 == 0 && s3 == 1 && s4 == 0)) {
-            setGroupSpeed(speed, speed); 
+            setGroupSpeed(-speed, -speed); 
         } 
         // 2. 偏左 -> 左轮减速，右轮满速
         else if (s3 == 0 && s2 == 1) {
-            setGroupSpeed(20, speed);
+            setGroupSpeed(-20, -speed);
         } 
         // 3. 极左 -> 左轮反转，右轮满速
         else if (s1 == 1) {
-            setGroupSpeed(-40, speed);
+            setGroupSpeed(40, -speed);
         } 
         // 4. 偏右 -> 左轮满速，右轮减速
         else if (s3 == 1 && s4 == 0) {
-            setGroupSpeed(speed, 20);
+            setGroupSpeed(-speed, -20);
         } 
         // 5. 极右 -> 左轮满速，右轮反转
         else if (s4 == 1) {
-            setGroupSpeed(speed, -40);
+            setGroupSpeed(-speed, 40);
         } 
         // 默认直行
         else {
-            setGroupSpeed(speed, speed);
+            setGroupSpeed(-speed, -speed);
         }
     }
 
