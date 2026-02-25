@@ -16,14 +16,14 @@ enum MotorList {
 }
 
 enum LineSensor {
-    //% block="X1 (P12)"
-    X1 = DigitalPin.P12,
-    //% block="X2 (P13)"
-    X2 = DigitalPin.P13,
-    //% block="X3 (P14)"
-    X3 = DigitalPin.P14,
-    //% block="X4 (P15)"
-    X4 = DigitalPin.P15
+    //% block="X1 (P10)"
+    X1 = DigitalPin.P10,
+    //% block="X2 (P7)"
+    X2 = DigitalPin.P7,
+    //% block="X3 (P6)"
+    X3 = DigitalPin.P6,
+    //% block="X4 (P4)"
+    X4 = DigitalPin.P4
 }
 
 enum LineColor {
