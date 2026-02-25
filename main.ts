@@ -194,6 +194,15 @@ namespace motorx {
     function setCustomServoAngleNative(id: number, angle: number): void {
         console.log(`Sim: Custom Servo S${id} -> Angle ${angle}`);
     }
+
+    //% shim=motorx::encResetNative
+    export function encResetNative(): void { console.log("Sim: Reset Enc"); }
+    
+    //% shim=motorx::encCountLeftNative
+    export function encCountLeftNative(): number { return 0; }
+    
+    //% shim=motorx::encCountRightNative
+    export function encCountRightNative(): number { return 0; }
 }
 
 // =================================================================
@@ -352,24 +361,15 @@ namespace diffRobot {
     //% block="编码器 %motor 清零"
     //% group="编码器"
     //% weight=56
-    export function encoderReset(motor: MotorList): void { encResetNative(); }
+    export function encoderReset(motor: MotorList): void { motorx.encResetNative(); }
 
     //% block="读取 %motor 编码器计数"
     //% group="编码器"
     //% weight=55
     export function encoderCount(motor: MotorList): number {
-        if (motor === MotorList.M1) return encCountLeftNative();
-        if (motor === MotorList.M2) return encCountRightNative();
+        if (motor === MotorList.M1) return motorx.encCountLeftNative();
+        if (motor === MotorList.M2) return motorx.encCountRightNative();
         return 0;
     }
-
-        //% shim=motorx::encResetNative
-    function encResetNative(): void { console.log("Sim: Reset Enc"); }
-    
-    //% shim=motorx::encCountLeftNative
-    function encCountLeftNative(): number { return 0; }
-    
-    //% shim=motorx::encCountRightNative
-    function encCountRightNative(): number { return 0; }
 }
 
