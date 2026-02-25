@@ -304,27 +304,27 @@ namespace diffRobot {
         
         // 1. 全黑或全白 -> 直行
         if ((s2 == 1 && s3 == 1) || (s1 == 0 && s2 == 1 && s3 == 0 && s4 == 0) || (s1 == 0 && s2 == 0 && s3 == 1 && s4 == 0)) {
-            setGroupSpeed(-speed, -speed); 
+            setTwoGroupSpeed(speed, speed); 
         } 
-        // 2. 偏左 -> 左轮减速，右轮满速
+        // 2. 极右 -> 左轮减速，右轮满速
         else if (s3 == 0 && s2 == 1) {
-            setGroupSpeed(-20, -speed);
+            setTwoGroupSpeed(20, speed);
         } 
-        // 3. 极左 -> 左轮反转，右轮满速
+        // 3. 偏右 -> 左轮反转，右轮满速
         else if (s1 == 1) {
-            setGroupSpeed(40, -speed);
+            setTwoGroupSpeed(40, speed);
         } 
-        // 4. 偏右 -> 左轮满速，右轮减速
+        // 4. 偏左 -> 左轮满速，右轮减速
         else if (s3 == 1 && s4 == 0) {
-            setGroupSpeed(-speed, -20);
+            setTwoGroupSpeed(speed, 20);
         } 
-        // 5. 极右 -> 左轮满速，右轮反转
+        // 5. 极左 -> 左轮满速，右轮反转
         else if (s4 == 1) {
-            setGroupSpeed(-speed, 40);
+            setTwoGroupSpeed(speed, 40);
         } 
         // 默认直行
         else {
-            setGroupSpeed(-speed, -speed);
+            setTwoGroupSpeed(speed, speed);
         }
     }
 
@@ -334,6 +334,11 @@ namespace diffRobot {
         motorx._internalSetMotor(3, leftSpeed); // M3
         motorx._internalSetMotor(2, rightSpeed); // M2
         motorx._internalSetMotor(4, rightSpeed); // M4
+    }
+
+    function setTwoGroupSpeed(leftSpeed: number, rightSpeed: number) {
+        motorx._internalSetMotor(1, leftSpeed); // M1
+        motorx._internalSetMotor(3, rightSpeed); // M2
     }
 
     //% block="设置巡线模式为 %color"
