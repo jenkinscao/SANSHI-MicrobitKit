@@ -58,7 +58,7 @@ enum MoveDir {
 // 📦 命名空间 1: 基础硬件控制 (初始化/舵机/单电机/编码器)
 // =================================================================
 
-//% color=#FF7A00 icon="\uf1b9" block="机器人底座"
+//% color=#FF7A00 icon="\uf1b9" block="机器人通用控制"
 namespace motorx {
 
     //% block="初始化 驱动板"
@@ -109,23 +109,6 @@ namespace motorx {
         stopNative();
     }
 
-    // ===========================
-    //    编码器 (辅助)
-    // ===========================
-
-    //% block="编码器 %motor 清零"
-    //% group="编码器"
-    //% weight=40
-    export function encoderReset(motor: MotorList): void { encResetNative(); }
-
-    //% block="读取 %motor 编码器计数"
-    //% group="编码器"
-    //% weight=39
-    export function encoderCount(motor: MotorList): number {
-        if (motor === MotorList.M1) return encCountLeftNative();
-        if (motor === MotorList.M2) return encCountRightNative();
-        return 0;
-    }
 
     // ===========================
     //    舵机控制
@@ -367,6 +350,24 @@ namespace diffRobot {
     //% weight=57
     export function getSensorValue(sensor: LineSensor): number {
         return pins.digitalReadPin(sensor);
+    }
+
+    // ===========================
+    //    编码器 (辅助)
+    // ===========================
+
+    //% block="编码器 %motor 清零"
+    //% group="编码器"
+    //% weight=56
+    export function encoderReset(motor: MotorList): void { encResetNative(); }
+
+    //% block="读取 %motor 编码器计数"
+    //% group="编码器"
+    //% weight=55
+    export function encoderCount(motor: MotorList): number {
+        if (motor === MotorList.M1) return encCountLeftNative();
+        if (motor === MotorList.M2) return encCountRightNative();
+        return 0;
     }
 }
 
