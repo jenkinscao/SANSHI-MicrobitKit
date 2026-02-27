@@ -107,10 +107,10 @@ namespace motorx
         int chA = 0; int chB = 0;
 
         switch (motorId) {
-            case 1: chA = 0; chB = 1; break;
-            case 2: chA = 3; chB = 2; break;
-            case 3: chA = 5; chB = 4; break;
-            case 4: chA = 6; chB = 7; break;
+            case 1: chA = 0; chB = 1; break; //左轮（前）倒过来出轴了，所以正反转通道反过来接了
+            case 2: chA = 3; chB = 2; break; //左轮（后）
+            case 3: chA = 5; chB = 4; break; //右轮（前）
+            case 4: chA = 6; chB = 7; break; //右轮（后）
             default: return;
         }
 
