@@ -291,7 +291,7 @@ namespace diffRobot {
 
     let lineLogic = 1; 
 
-    //% block="强力巡线 (4驱) 满速V1 %speed"
+    //% block="强力巡线 (2驱) 满速 %speed"
     //% speed.min=0 speed.max=100 speed.def=100
     //% weight=60
     export function trackLineStrong(speed: number): void {
@@ -381,6 +381,7 @@ namespace diffRobot {
         return 0;
     }
 }
+
 
 
 
