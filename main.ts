@@ -58,7 +58,7 @@ enum MoveDir {
 // 📦 命名空间 1: 基础硬件控制 (初始化/舵机/单电机/编码器)
 // =================================================================
 
-//% color=#FF7A00 icon="\uf1b9" block="机器人通用控制V1.00"
+//% color=#FF7A00 icon="\uf1b9" block="机器人通用控制V1.01"
 namespace motorx {
 
     //% block="初始化 驱动板"
@@ -235,13 +235,13 @@ namespace mecanumRobot {
             case MoveDir.Back:
                 setAll(-s, -s, -s, -s); break;
             case MoveDir.Left:
-                setAll(-s, s, s, -s); break;
+                setAll(-s, -s, s, s); break;
             case MoveDir.Right:
-                setAll(s, -s, -s, s); break;
+                setAll(s, s, -s, -s); break;
             case MoveDir.LeftFront:
-                setAll(0, s, s, 0); break;
-            case MoveDir.RightFront:
                 setAll(s, 0, 0, s); break;
+            case MoveDir.RightFront:
+                setAll(0, s, s, 0); break;
             case MoveDir.LeftBack:
                 setAll(-s, 0, 0, -s); break;
             case MoveDir.RightBack:
@@ -303,28 +303,32 @@ namespace diffRobot {
         // 💡 逻辑：左侧(M1+M3) 右侧(M2+M4)
         
         // 1. 全黑或全白 -> 直行
-        if ((s2 == 1 && s3 == 1) || (s1 == 0 && s2 == 1 && s3 == 0 && s4 == 0) || (s1 == 0 && s2 == 0 && s3 == 1 && s4 == 0)) {
+        if (s1 && s3) {
             setTwoGroupSpeed(speed, speed); 
         } 
-        // 2. 极右 -> 左轮减速，右轮满速
-        else if (s3 == 0 && s2 == 1) {
-            setTwoGroupSpeed(20, speed);
-        } 
-        // 3. 偏右 -> 左轮反转，右轮满速
-        else if (s1 == 1) {
-            setTwoGroupSpeed(40, speed);
-        } 
-        // 4. 偏左 -> 左轮满速，右轮减速
-        else if (s3 == 1 && s4 == 0) {
-            setTwoGroupSpeed(speed, 20);
-        } 
-        // 5. 极左 -> 左轮满速，右轮反转
-        else if (s4 == 1) {
-            setTwoGroupSpeed(speed, 40);
-        } 
-        // 默认直行
-        else {
-            setTwoGroupSpeed(speed, speed);
+        else if(!s1 && !s3 && !s2 && !s4)
+        {
+            setTwoGroupSpeed(-speed, -speed); 
+        }
+        else if(s4)
+        {
+            setTwoGroupSpeed(70, 0);
+        }
+        else if(s2)
+        {
+            setTwoGroupSpeed(0, 70);
+        }
+        else if(s1)
+        {
+            setTwoGroupSpeed(30, 50);
+        }
+        else if(s3)
+        {
+            setTwoGroupSpeed(50, 30);
+        }
+        else
+        {
+            setTwoGroupSpeed(0, 0);
         }
     }
 
@@ -337,8 +341,8 @@ namespace diffRobot {
     }
 
     function setTwoGroupSpeed(leftSpeed: number, rightSpeed: number) {
-        motorx._internalSetMotor(1, -leftSpeed); // M1
-        motorx._internalSetMotor(3, -rightSpeed); // M3
+        motorx._internalSetMotor(2, leftSpeed); // M1
+        motorx._internalSetMotor(4, rightSpeed); // M3
     }
 
     //% block="设置巡线模式为 %color"
@@ -377,6 +381,7 @@ namespace diffRobot {
         return 0;
     }
 }
+
 
 
 
