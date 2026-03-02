@@ -312,19 +312,19 @@ namespace diffRobot {
         }
         else if(s4)
         {
-            setTwoGroupSpeed(70, 0);
+            setTwoGroupSpeed(speed + 20, 0);
         }
         else if(s2)
         {
-            setTwoGroupSpeed(0, 70);
+            setTwoGroupSpeed(0, speed + 20);
         }
         else if(s1)
         {
-            setTwoGroupSpeed(30, 50);
+            setTwoGroupSpeed(speed - 10, speed + 10);
         }
         else if(s3)
         {
-            setTwoGroupSpeed(50, 30);
+            setTwoGroupSpeed(speed + 10, speed - 10);
         }
         else
         {
@@ -381,6 +381,7 @@ namespace diffRobot {
         return 0;
     }
 }
+
 
 
 
