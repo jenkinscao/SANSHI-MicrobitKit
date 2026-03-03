@@ -15,6 +15,26 @@ enum MotorList {
     All = 99
 }
 
+enum DiffMoveDir {
+    //% block="前进"
+    Forward,
+    //% block="后退"
+    Backward,
+    //% block="左转"
+    TurnLeft,
+    //% block="右转"
+    TurnRight
+}
+
+enum CrossType {
+    //% block="十字路口"
+    Cross,
+    //% block="左侧路口"
+    LeftT,
+    //% block="右侧路口"
+    RightT
+}
+
 enum LineSensor {
     //% block="X1 (P10)"
     X1 = DigitalPin.P10,
@@ -283,10 +303,10 @@ namespace mecanumRobot {
 }
 
 // =================================================================
-// 🚜 命名空间 3: 差速/巡线控制 (双轮/四轮坦克模式)
+// 🚜 命名空间 3: 差速/巡线控制 (双轮模式)
 // =================================================================
 
-//% color=#E65100 icon="\uf018" block="巡线/坦克车"
+//% color=#E65100 icon="\uf018" block="巡线车"
 namespace diffRobot {
 
     let lineLogic = 1; 
@@ -379,6 +399,75 @@ namespace diffRobot {
         if (motor === MotorList.M1) return motorx.encCountLeftNative();
         if (motor === MotorList.M2) return motorx.encCountRightNative();
         return 0;
+    }
+
+    // ===========================
+    //    扩展：时间与传感器控制
+    // ===========================
+
+    //% block="以 %speed 速度 %dir 持续 %time 秒"
+    //% speed.min=0 speed.max=100 speed.def=80
+    //% weight=54
+    export function moveTime(speed: number, dir: DiffMoveDir, time: number): void {
+        if (dir == DiffMoveDir.Forward) setTwoGroupSpeed(speed, speed);
+        else if (dir == DiffMoveDir.Backward) setTwoGroupSpeed(-speed, -speed);
+        else if (dir == DiffMoveDir.TurnLeft) setTwoGroupSpeed(-speed, speed);
+        else if (dir == DiffMoveDir.TurnRight) setTwoGroupSpeed(speed, -speed);
+        
+        basic.pause(time * 1000);
+        setTwoGroupSpeed(0, 0);
+    }
+
+    //% block="以 %speed 速度 %dir 直到传感器 %sensor 触发"
+    //% speed.min=0 speed.max=100 speed.def=80
+    //% weight=53
+    export function moveUntilSensor(speed: number, dir: DiffMoveDir, sensor: LineSensor): void {
+        if (dir == DiffMoveDir.Forward) setTwoGroupSpeed(speed, speed);
+        else if (dir == DiffMoveDir.Backward) setTwoGroupSpeed(-speed, -speed);
+        else if (dir == DiffMoveDir.TurnLeft) setTwoGroupSpeed(-speed, speed);
+        else if (dir == DiffMoveDir.TurnRight) setTwoGroupSpeed(speed, -speed);
+        
+        // 循环等待，直到指定的传感器检测到线
+        while (!isLineDetected(sensor)) {
+            basic.pause(10);
+        }
+        setTwoGroupSpeed(0, 0);
+    }
+
+    // ===========================
+    //    扩展：高级巡线
+    // ===========================
+
+    //% block="巡线 速度 %speed 持续 %time 秒"
+    //% speed.min=0 speed.max=100 speed.def=80
+    //% weight=52
+    export function trackLineTime(speed: number, time: number): void {
+        let start = input.runningTime(); // 获取当前运行的毫秒数
+        while (input.runningTime() - start < time * 1000) {
+            trackLineStrong(speed); // 复用你的强力巡线逻辑
+            basic.pause(10); // 释放CPU，防止死锁
+        }
+        setTwoGroupSpeed(0, 0);
+    }
+
+    //% block="巡线 速度 %speed 直到遇到 %crossType"
+    //% speed.min=0 speed.max=100 speed.def=80
+    //% weight=51
+    export function trackLineUntilCross(speed: number, crossType: CrossType): void {
+        while (true) {
+            // 根据 trackLineStrong 逻辑推理：X2是左侧(控制右转)，X4是右侧(控制左转)
+            let s2 = isLineDetected(LineSensor.X2); 
+            let s4 = isLineDetected(LineSensor.X4);
+            
+            // 判断路口类型
+            if (crossType == CrossType.Cross && s2 && s4) break;
+            else if (crossType == CrossType.LeftT && s2) break; 
+            else if (crossType == CrossType.RightT && s4) break; 
+            
+            trackLineStrong(speed);
+            basic.pause(10);
+        }
+        setTwoGroupSpeed(0, 0); // 遇到路口后刹车
     }
 }
 
