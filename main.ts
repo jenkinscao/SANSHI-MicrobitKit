@@ -229,7 +229,7 @@ namespace motorx {
 // 🎮 命名空间 2: 麦克纳姆轮控制 (四轮全向)
 // =================================================================
 
-//% color=#0078D7 icon="\uf047" block="麦轮车"
+//% color=#0078D7 icon="\uf0b2" block="麦轮车"
 namespace mecanumRobot {
     
     // 变量：记录上一次的运动状态，用于防反向冲击
@@ -291,6 +291,15 @@ namespace mecanumRobot {
         } else {
             setAll(-speed, -speed, speed, speed);
         }
+    }
+
+    //% block="麦轮移动 方向 %dir 速度 %speed 持续 %time 秒"
+    //% speed.min=0 speed.max=100 speed.def=80
+    //% weight=78
+    export function mecanumMoveTime(dir: MoveDir, speed: number, time: number): void {
+        mecanumMove(dir, speed);      // 复用已有的移动逻辑（包含防重启保护）
+        basic.pause(time * 1000);     // 延时指定的时间（秒转毫秒）
+        mecanumMove(MoveDir.Stop, 0); // 时间到后停止
     }
 
     // 内部帮助函数
