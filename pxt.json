@@ -1,6 +1,6 @@
 {
     "name": "sanshi-microbitkit",
-    "version": "0.3.15",
+    "version": "0.3.16",
     "dependencies": {
         "core": "*",
         "radio": "*",
