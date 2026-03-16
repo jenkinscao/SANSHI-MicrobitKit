@@ -74,6 +74,18 @@ enum MoveDir {
     Stop = 99
 }
 
+// 定义路口类型的下拉列表
+export enum IntersectionType {
+    //% block="十字路口"
+    Crossroad,
+    //% block="左侧路口"
+    LeftTurn,
+    //% block="右侧路口"
+    RightTurn,
+    //% block="不停车(仅巡线)"
+    None
+}
+
 // =================================================================
 // 📦 命名空间 1: 基础硬件控制 (初始化/舵机/单电机/编码器)
 // =================================================================
@@ -124,7 +136,7 @@ namespace motorx {
     export function _internalSetMotor(id: number, speed: number) {
         setMotorSpeedNative(id, speed);
     }
-    
+
     export function _internalStop() {
         stopNative();
     }
@@ -155,7 +167,7 @@ namespace motorx {
     //% group="舵机控制"
     //% weight=30
     export function setCustomServoAngle(pin: number, angle: number): void {
-        setCustomServoAngleNative(pin, angle); 
+        setCustomServoAngleNative(pin, angle);
     }
 
     /**
@@ -187,18 +199,18 @@ namespace motorx {
     //    SHIMS (底层接口)
     //    必须保留在 motorx 命名空间下以匹配 C++ 定义
     // ===========================
-    
+
     //% shim=motorx::initNative
     function initNative(): void { console.log("Sim: Init PCA9685"); }
-    
+
     //% shim=motorx::setMotorSpeedNative
-    function setMotorSpeedNative(id: number, speed: number): void { 
-        console.log(`Sim: Motor M${id} -> Speed ${speed}`); 
+    function setMotorSpeedNative(id: number, speed: number): void {
+        console.log(`Sim: Motor M${id} -> Speed ${speed}`);
     }
-    
+
     //% shim=motorx::stopNative
     function stopNative(): void { console.log("Sim: Stop All"); }
-    
+
 
 
     //% shim=motorx::setServoAngleNative
@@ -217,10 +229,10 @@ namespace motorx {
 
     //% shim=motorx::encResetNative
     export function encResetNative(): void { console.log("Sim: Reset Enc"); }
-    
+
     //% shim=motorx::encCountLeftNative
     export function encCountLeftNative(): number { return 0; }
-    
+
     //% shim=motorx::encCountRightNative
     export function encCountRightNative(): number { return 0; }
 }
@@ -231,9 +243,9 @@ namespace motorx {
 
 //% color=#0078D7 icon="\uf0b2" block="麦轮车"
 namespace mecanumRobot {
-    
+
     // 变量：记录上一次的运动状态，用于防反向冲击
-    let lastMoveState = MoveDir.Stop; 
+    let lastMoveState = MoveDir.Stop;
 
     //% block="麦轮移动 方向 %dir 速度 %speed"
     //% speed.min=0 speed.max=100 speed.def=80
@@ -242,9 +254,9 @@ namespace mecanumRobot {
         // === ⚡ 核心修改：防重启保护逻辑 ⚡ ===
         if (dir != lastMoveState && lastMoveState != MoveDir.Stop) {
             motorx._internalStop();
-            basic.pause(100); 
+            basic.pause(100);
         }
-        
+
         lastMoveState = dir;
         // ========================================
 
@@ -279,10 +291,10 @@ namespace mecanumRobot {
     export function mecanumSpin(left: boolean, speed: number): void {
         // 旋转状态特殊ID标记：100(左) 和 101(右)
         let spinState = left ? 100 : 101;
-        
+
         if (spinState != lastMoveState && lastMoveState != MoveDir.Stop) {
             motorx._internalStop();
-            basic.pause(100); 
+            basic.pause(100);
         }
         lastMoveState = spinState;
 
@@ -318,47 +330,81 @@ namespace mecanumRobot {
 //% color=#E65100 icon="\uf018" block="巡线车"
 namespace diffRobot {
 
-    let lineLogic = 1; 
-
-    //% block="强力巡线 (2驱) 满速 %speed"
+    let lineLogic = 0; // 默认黑线（地面白）
+    //% block="遇 %stopType 停车，强力巡线 (2驱) 满速 %speed"
     //% speed.min=0 speed.max=100 speed.def=100
     //% weight=60
-    export function trackLineStrong(speed: number): void {
-        let s4 = (pins.digitalReadPin(LineSensor.X4) == lineLogic) ? 1 : 0; 
-        let s3 = (pins.digitalReadPin(LineSensor.X3) == lineLogic) ? 1 : 0; 
-        let s1 = (pins.digitalReadPin(LineSensor.X1) == lineLogic) ? 1 : 0; 
-        let s2 = (pins.digitalReadPin(LineSensor.X2) == lineLogic) ? 1 : 0; 
+    export function trackLineStrongStop(stopType: IntersectionType, speed: number): void {
+        // 1. 获取传感器状态
+        let farLeft = (pins.digitalReadPin(LineSensor.X2) == lineLogic) ? 1 : 0; // 最左侧
+        let innerLeft = (pins.digitalReadPin(LineSensor.X1) == lineLogic) ? 1 : 0; // 中间偏左
+        let innerRight = (pins.digitalReadPin(LineSensor.X3) == lineLogic) ? 1 : 0; // 中间偏右
+        let farRight = (pins.digitalReadPin(LineSensor.X4) == lineLogic) ? 1 : 0; // 最右侧
 
-        // 💡 逻辑：左侧(M1+M3) 右侧(M2+M4)
-        
-        // 1. 全黑或全白 -> 直行
-        if (s1 && s3) {
-            setTwoGroupSpeed(speed, speed); 
-        } 
-        else if(!s1 && !s3 && !s2 && !s4)
-        {
-            setTwoGroupSpeed(-speed, -speed); 
+        // 💡 优先级 1：识别路口并决定是停车还是继续执行原动作
+        if (farLeft && farRight) {
+            // [十字路口 / 尽头丁字路口]：最左和最右都压线
+            if (stopType == IntersectionType.Crossroad) {
+                set2GroupSpeed(0, 0); // 目标路口，停车
+                return;               // 退出函数，保持停车状态
+            } else {
+                set2GroupSpeed(speed, speed); // 非目标路口，按原逻辑直行冲过
+            }
         }
-        else if(s4)
-        {
-            setTwoGroupSpeed(speed + 20, 0);
+        else if (farLeft && (innerLeft || innerRight)) {
+            // [左侧岔路口 / 左直角弯]：最左压线，且中间也压线
+            if (stopType == IntersectionType.LeftTurn) {
+                set2GroupSpeed(0, 0); // 目标路口，停车
+                return;
+            } else {
+                set2GroupSpeed(0, speed + 20); // 非目标路口，按原逻辑强力左转
+            }
         }
-        else if(s2)
-        {
-            setTwoGroupSpeed(0, speed + 20);
+        else if (farRight && (innerLeft || innerRight)) {
+            // [右侧岔路口 / 右直角弯]：最右压线，且中间也压线
+            if (stopType == IntersectionType.RightTurn) {
+                set2GroupSpeed(0, 0); // 目标路口，停车
+                return;
+            } else {
+                set2GroupSpeed(speed + 20, 0); // 非目标路口，按原逻辑强力右转
+            }
         }
-        else if(s1)
-        {
-            setTwoGroupSpeed(speed - 10, speed + 10);
+
+        // 💡 优先级 2：正常巡线微调 (中间两个传感器发生偏移)
+        else if (innerLeft && innerRight) {
+            // 完美居中：直行
+            set2GroupSpeed(speed, speed);
         }
-        else if(s3)
-        {
-            setTwoGroupSpeed(speed + 10, speed - 10);
+        else if (innerLeft && !innerRight) {
+            // 只有左边中间压线：车头偏右，需要向左微调
+            set2GroupSpeed(speed - 10, speed + 10);
         }
-        else
-        {
-            setTwoGroupSpeed(0, 0);
+        else if (!innerLeft && innerRight) {
+            // 只有右边中间压线：车头偏左，需要向右微调
+            set2GroupSpeed(speed + 10, speed - 10);
         }
+
+        // 💡 优先级 3：极端偏移补救
+        else if (farLeft) {
+            // 只有最左侧压线（中间全脱离）：极限左转找线
+            set2GroupSpeed(-10, speed + 20);
+        }
+        else if (farRight) {
+            // 只有最右侧压线（中间全脱离）：极限右转找线
+            set2GroupSpeed(speed + 20, -10);
+        }
+
+        // 💡 优先级 4：完全脱线
+        else {
+            // 全白或全黑未识别到：后退寻找线
+            set2GroupSpeed(-speed, -speed);
+        }
+    }
+
+    // 辅助函数
+    function set2GroupSpeed(leftSpeed: number, rightSpeed: number) {
+        motorx._internalSetMotor(2, leftSpeed); // M2 (右前) - 根据您的代码保留
+        motorx._internalSetMotor(4, rightSpeed); // M4 (右后) - 根据您的代码保留
     }
 
     // 辅助函数：同时设置左侧(M1,M3)和右侧(M2,M4)的速度
@@ -367,11 +413,6 @@ namespace diffRobot {
         motorx._internalSetMotor(3, leftSpeed); // M3
         motorx._internalSetMotor(2, rightSpeed); // M2
         motorx._internalSetMotor(4, rightSpeed); // M4
-    }
-
-    function setTwoGroupSpeed(leftSpeed: number, rightSpeed: number) {
-        motorx._internalSetMotor(2, leftSpeed); // M1
-        motorx._internalSetMotor(4, rightSpeed); // M3
     }
 
     //% block="设置巡线模式为 %color"
@@ -422,7 +463,7 @@ namespace diffRobot {
         else if (dir == DiffMoveDir.Backward) setTwoGroupSpeed(-speed, -speed);
         else if (dir == DiffMoveDir.TurnLeft) setTwoGroupSpeed(-speed, speed);
         else if (dir == DiffMoveDir.TurnRight) setTwoGroupSpeed(speed, -speed);
-        
+
         basic.pause(time * 1000);
         setTwoGroupSpeed(0, 0);
     }
@@ -435,7 +476,7 @@ namespace diffRobot {
         else if (dir == DiffMoveDir.Backward) setTwoGroupSpeed(-speed, -speed);
         else if (dir == DiffMoveDir.TurnLeft) setTwoGroupSpeed(-speed, speed);
         else if (dir == DiffMoveDir.TurnRight) setTwoGroupSpeed(speed, -speed);
-        
+
         // 循环等待，直到指定的传感器检测到线
         while (!isLineDetected(sensor)) {
             basic.pause(10);
@@ -465,14 +506,14 @@ namespace diffRobot {
     export function trackLineUntilCross(speed: number, crossType: CrossType): void {
         while (true) {
             // 根据 trackLineStrong 逻辑推理：X2是左侧(控制右转)，X4是右侧(控制左转)
-            let s2 = isLineDetected(LineSensor.X2); 
+            let s2 = isLineDetected(LineSensor.X2);
             let s4 = isLineDetected(LineSensor.X4);
-            
+
             // 判断路口类型
             if (crossType == CrossType.Cross && s2 && s4) break;
-            else if (crossType == CrossType.LeftT && s2) break; 
-            else if (crossType == CrossType.RightT && s4) break; 
-            
+            else if (crossType == CrossType.LeftT && s2) break;
+            else if (crossType == CrossType.RightT && s4) break;
+
             trackLineStrong(speed);
             basic.pause(10);
         }
