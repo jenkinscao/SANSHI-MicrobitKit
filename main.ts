@@ -397,7 +397,7 @@ namespace diffRobot {
         // 💡 优先级 4：完全脱线
         else {
             // 全白或全黑未识别到：后退寻找线
-            set2GroupSpeed(-speed, -speed);
+            set2GroupSpeed(speed, speed);
         }
     }
 
