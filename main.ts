@@ -459,29 +459,29 @@ namespace diffRobot {
     //% speed.min=0 speed.max=100 speed.def=80
     //% weight=54
     export function moveTime(speed: number, dir: DiffMoveDir, time: number): void {
-        if (dir == DiffMoveDir.Forward) setTwoGroupSpeed(speed, speed);
-        else if (dir == DiffMoveDir.Backward) setTwoGroupSpeed(-speed, -speed);
-        else if (dir == DiffMoveDir.TurnLeft) setTwoGroupSpeed(-speed, speed);
-        else if (dir == DiffMoveDir.TurnRight) setTwoGroupSpeed(speed, -speed);
+        if (dir == DiffMoveDir.Forward) set2GroupSpeed(speed, speed);
+        else if (dir == DiffMoveDir.Backward) set2GroupSpeed(-speed, -speed);
+        else if (dir == DiffMoveDir.TurnLeft) set2GroupSpeed(-speed, speed);
+        else if (dir == DiffMoveDir.TurnRight) set2GroupSpeed(speed, -speed);
 
         basic.pause(time * 1000);
-        setTwoGroupSpeed(0, 0);
+        set2GroupSpeed(0, 0);
     }
 
     //% block="以 %speed 速度 %dir 直到传感器 %sensor 触发"
     //% speed.min=0 speed.max=100 speed.def=80
     //% weight=53
     export function moveUntilSensor(speed: number, dir: DiffMoveDir, sensor: LineSensor): void {
-        if (dir == DiffMoveDir.Forward) setTwoGroupSpeed(speed, speed);
-        else if (dir == DiffMoveDir.Backward) setTwoGroupSpeed(-speed, -speed);
-        else if (dir == DiffMoveDir.TurnLeft) setTwoGroupSpeed(-speed, speed);
-        else if (dir == DiffMoveDir.TurnRight) setTwoGroupSpeed(speed, -speed);
+        if (dir == DiffMoveDir.Forward) set2GroupSpeed(speed, speed);
+        else if (dir == DiffMoveDir.Backward) set2GroupSpeed(-speed, -speed);
+        else if (dir == DiffMoveDir.TurnLeft) set2GroupSpeed(-speed, speed);
+        else if (dir == DiffMoveDir.TurnRight) set2GroupSpeed(speed, -speed);
 
         // 循环等待，直到指定的传感器检测到线
         while (!isLineDetected(sensor)) {
             basic.pause(10);
         }
-        setTwoGroupSpeed(0, 0);
+        set2GroupSpeed(0, 0);
     }
 
     // ===========================
@@ -497,7 +497,7 @@ namespace diffRobot {
             trackLineStrong(speed); // 复用你的强力巡线逻辑
             basic.pause(10); // 释放CPU，防止死锁
         }
-        setTwoGroupSpeed(0, 0);
+        set2GroupSpeed(0, 0);
     }
 
     //% block="巡线 速度 %speed 直到遇到 %crossType"
@@ -517,7 +517,7 @@ namespace diffRobot {
             trackLineStrong(speed);
             basic.pause(10);
         }
-        setTwoGroupSpeed(0, 0); // 遇到路口后刹车
+        set2GroupSpeed(0, 0); // 遇到路口后刹车
     }
 }
 
