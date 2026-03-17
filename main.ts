@@ -75,7 +75,7 @@ enum MoveDir {
 }
 
 // 定义路口类型的下拉列表
-export enum IntersectionType {
+enum IntersectionType {
     //% block="十字路口"
     Crossroad,
     //% block="左侧路口"
