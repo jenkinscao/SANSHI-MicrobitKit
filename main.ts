@@ -514,7 +514,7 @@ namespace diffRobot {
             else if (crossType == CrossType.LeftT && s2) break;
             else if (crossType == CrossType.RightT && s4) break;
 
-            trackLineStrong(speed, IntersectionType.None);
+            trackLineStrongStop(speed, IntersectionType.None);
             basic.pause(10);
         }
         set2GroupSpeed(0, 0); // 遇到路口后刹车
