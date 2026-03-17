@@ -403,8 +403,8 @@ namespace diffRobot {
 
     // 辅助函数
     function set2GroupSpeed(leftSpeed: number, rightSpeed: number) {
-        motorx._internalSetMotor(2, leftSpeed); // M2 (右前) - 根据您的代码保留
-        motorx._internalSetMotor(4, rightSpeed); // M4 (右后) - 根据您的代码保留
+        motorx._internalSetMotor(3, leftSpeed); // M3 (右前) 
+        motorx._internalSetMotor(1, rightSpeed); // M1 (左前) 
     }
 
     // 辅助函数：同时设置左侧(M1,M3)和右侧(M2,M4)的速度
