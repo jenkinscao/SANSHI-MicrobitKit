@@ -494,7 +494,7 @@ namespace diffRobot {
     export function trackLineTime(speed: number, time: number): void {
         let start = input.runningTime(); // 获取当前运行的毫秒数
         while (input.runningTime() - start < time * 1000) {
-            trackLineStrong(speed); // 复用你的强力巡线逻辑
+            trackLineStrongStop(speed, IntersectionType.None); // 复用你的强力巡线逻辑
             basic.pause(10); // 释放CPU，防止死锁
         }
         set2GroupSpeed(0, 0);
@@ -514,7 +514,7 @@ namespace diffRobot {
             else if (crossType == CrossType.LeftT && s2) break;
             else if (crossType == CrossType.RightT && s4) break;
 
-            trackLineStrong(speed);
+            trackLineStrong(speed, IntersectionType.None);
             basic.pause(10);
         }
         set2GroupSpeed(0, 0); // 遇到路口后刹车
