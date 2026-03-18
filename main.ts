@@ -335,13 +335,14 @@ namespace diffRobot {
     //% speed.min=0 speed.max=100 speed.def=100
     //% weight=60
     export function trackLineStrongStop(stopType: IntersectionType, speed: number): void {
+        while(true){
         // 1. 获取传感器状态
         let farLeft = (pins.digitalReadPin(LineSensor.X2) == lineLogic) ? 1 : 0; // 最左侧
         let innerLeft = (pins.digitalReadPin(LineSensor.X1) == lineLogic) ? 1 : 0; // 中间偏左
         let innerRight = (pins.digitalReadPin(LineSensor.X3) == lineLogic) ? 1 : 0; // 中间偏右
         let farRight = (pins.digitalReadPin(LineSensor.X4) == lineLogic) ? 1 : 0; // 最右侧
 
-        while(true){
+        
             // 💡 优先级 1：识别路口并决定是停车还是继续执行原动作
             if (farLeft && farRight) {
                 // [十字路口 / 尽头丁字路口]：最左和最右都压线
