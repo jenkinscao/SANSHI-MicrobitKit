@@ -341,63 +341,65 @@ namespace diffRobot {
         let innerRight = (pins.digitalReadPin(LineSensor.X3) == lineLogic) ? 1 : 0; // 中间偏右
         let farRight = (pins.digitalReadPin(LineSensor.X4) == lineLogic) ? 1 : 0; // 最右侧
 
-        // 💡 优先级 1：识别路口并决定是停车还是继续执行原动作
-        if (farLeft && farRight) {
-            // [十字路口 / 尽头丁字路口]：最左和最右都压线
-            if (stopType == IntersectionType.Crossroad) {
-                set2GroupSpeed(0, 0); // 目标路口，停车
-                return;               // 退出函数，保持停车状态
-            } else {
-                set2GroupSpeed(speed, speed); // 非目标路口，按原逻辑直行冲过
+        while(true){
+            // 💡 优先级 1：识别路口并决定是停车还是继续执行原动作
+            if (farLeft && farRight) {
+                // [十字路口 / 尽头丁字路口]：最左和最右都压线
+                if (stopType == IntersectionType.Crossroad) {
+                    set2GroupSpeed(0, 0); // 目标路口，停车
+                    return;               // 退出函数，保持停车状态
+                } else {
+                    set2GroupSpeed(speed, speed); // 非目标路口，按原逻辑直行冲过
+                }
             }
-        }
-        else if (farLeft && (innerLeft || innerRight)) {
-            // [左侧岔路口 / 左直角弯]：最左压线，且中间也压线
-            if (stopType == IntersectionType.LeftTurn) {
-                set2GroupSpeed(0, 0); // 目标路口，停车
-                return;
-            } else {
-                set2GroupSpeed(0, speed + 20); // 非目标路口，按原逻辑强力左转
+            else if (farLeft && (innerLeft || innerRight)) {
+                // [左侧岔路口 / 左直角弯]：最左压线，且中间也压线
+                if (stopType == IntersectionType.LeftTurn) {
+                    set2GroupSpeed(0, 0); // 目标路口，停车
+                    return;
+                } else {
+                    set2GroupSpeed(0, speed + 20); // 非目标路口，按原逻辑强力左转
+                }
             }
-        }
-        else if (farRight && (innerLeft || innerRight)) {
-            // [右侧岔路口 / 右直角弯]：最右压线，且中间也压线
-            if (stopType == IntersectionType.RightTurn) {
-                set2GroupSpeed(0, 0); // 目标路口，停车
-                return;
-            } else {
-                set2GroupSpeed(speed + 20, 0); // 非目标路口，按原逻辑强力右转
+            else if (farRight && (innerLeft || innerRight)) {
+                // [右侧岔路口 / 右直角弯]：最右压线，且中间也压线
+                if (stopType == IntersectionType.RightTurn) {
+                    set2GroupSpeed(0, 0); // 目标路口，停车
+                    return;
+                } else {
+                    set2GroupSpeed(speed + 20, 0); // 非目标路口，按原逻辑强力右转
+                }
             }
-        }
-
-        // 💡 优先级 2：正常巡线微调 (中间两个传感器发生偏移)
-        else if (innerLeft && innerRight) {
-            // 完美居中：直行
-            set2GroupSpeed(speed, speed);
-        }
-        else if (innerLeft && !innerRight) {
-            // 只有左边中间压线：车头偏右，需要向左微调
-            set2GroupSpeed(speed - 10, speed + 10);
-        }
-        else if (!innerLeft && innerRight) {
-            // 只有右边中间压线：车头偏左，需要向右微调
-            set2GroupSpeed(speed + 10, speed - 10);
-        }
-
-        // 💡 优先级 3：极端偏移补救
-        else if (farLeft) {
-            // 只有最左侧压线（中间全脱离）：极限左转找线
-            set2GroupSpeed(-10, speed + 20);
-        }
-        else if (farRight) {
-            // 只有最右侧压线（中间全脱离）：极限右转找线
-            set2GroupSpeed(speed + 20, -10);
-        }
-
-        // 💡 优先级 4：完全脱线
-        else {
-            // 全白或全黑未识别到：后退寻找线
-            set2GroupSpeed(speed, speed);
+    
+            // 💡 优先级 2：正常巡线微调 (中间两个传感器发生偏移)
+            else if (innerLeft && innerRight) {
+                // 完美居中：直行
+                set2GroupSpeed(speed, speed);
+            }
+            else if (innerLeft && !innerRight) {
+                // 只有左边中间压线：车头偏右，需要向左微调
+                set2GroupSpeed(speed - 10, speed + 10);
+            }
+            else if (!innerLeft && innerRight) {
+                // 只有右边中间压线：车头偏左，需要向右微调
+                set2GroupSpeed(speed + 10, speed - 10);
+            }
+    
+            // 💡 优先级 3：极端偏移补救
+            else if (farLeft) {
+                // 只有最左侧压线（中间全脱离）：极限左转找线
+                set2GroupSpeed(-10, speed + 20);
+            }
+            else if (farRight) {
+                // 只有最右侧压线（中间全脱离）：极限右转找线
+                set2GroupSpeed(speed + 20, -10);
+            }
+    
+            // 💡 优先级 4：完全脱线
+            else {
+                // 全白或全黑未识别到：后退寻找线
+                set2GroupSpeed(speed, speed);
+            }
         }
     }
 
