@@ -40,8 +40,8 @@ enum LineSensor {
     X1 = DigitalPin.P10,
     //% block="X2 (P7)"
     X2 = DigitalPin.P7,
-    //% block="X3 (P6)"
-    X3 = DigitalPin.P6,
+    //% block="X3 (P9)"
+    X3 = DigitalPin.P9,
     //% block="X4 (P4)"
     X4 = DigitalPin.P4
 }
